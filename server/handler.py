@@ -72,7 +72,8 @@ class Handler:
         """Coroutine for creating file.
 
         Args:
-            request (Request): aiohttp request, contains filename.
+            request (Request): aiohttp request, contains JSON in body. JSON format:
+            {"content": "content string"}.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.

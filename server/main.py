@@ -24,6 +24,9 @@ def main():
     """Entry point of app.
 
     Get and parse command line parameters and configure web app.
+    Command line options:
+    -p --port - port (default: 8080).
+    -f --folder - working directory (absolute or relative path, default: current app folder FileServer).
 
     """
 

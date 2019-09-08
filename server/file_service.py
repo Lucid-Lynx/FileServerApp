@@ -46,15 +46,19 @@ class FileService:
         """
 
         full_filename = "{}.{}".format(filename, extension)
-        assert os.path.exists(full_filename), 'File {} is not exists'.format(full_filename)
+        assert os.path.exists(full_filename), \
+            'File {} is not exists'.format(full_filename)
 
         with open(full_filename, 'r') as file_handler:
             return {
                 'name': full_filename,
                 'content': file_handler.read(),
-                'create_date': utils.convert_date(os.path.getctime(full_filename)),
-                'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
-                'size': '{} bytes'.format(os.path.getsize(full_filename), 'bytes'),
+                'create_date': utils.convert_date(
+                    os.path.getctime(full_filename)),
+                'edit_date': utils.convert_date(
+                    os.path.getmtime(full_filename)),
+                'size': '{} bytes'.format(
+                    os.path.getsize(full_filename), 'bytes'),
             }
 
     @staticmethod
@@ -123,7 +127,8 @@ class FileService:
         """
 
         full_filename = "{}.{}".format(filename, extension)
-        assert os.path.exists(full_filename), 'File {} is not exists'.format(full_filename)
+        assert os.path.exists(full_filename), \
+            'File {} is not exists'.format(full_filename)
 
         os.remove(full_filename)
 

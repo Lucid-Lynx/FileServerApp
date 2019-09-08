@@ -15,5 +15,6 @@ setup(
         'cchardet==2.1.4',
         'aiodns==2.0.0',
         'pytest==5.1.2',
+        'pytest-aiohttp==0.3.0',
     ]
 )
