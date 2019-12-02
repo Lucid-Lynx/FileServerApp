@@ -4,6 +4,7 @@ import sys
 from aiohttp import web
 from server.handler import Handler
 from server.file_service import FileService
+from server.database import DataBase
 
 
 def commandline_parser() -> argparse.ArgumentParser:
@@ -33,6 +34,8 @@ def main():
     parser = commandline_parser()
     namespace = parser.parse_args(sys.argv[1:])
     FileService.change_dir(namespace.folder)
+
+    DataBase()
 
     handler = Handler()
     app = web.Application()
