@@ -110,6 +110,10 @@ class DataBase:
         role_id = Column(Integer, ForeignKey('Role.Id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
         role = relationship('Role', back_populates='methods')
 
+    @property
+    def engine(self):
+        return self.__engine
+
     def create_session(self):
         return sessionmaker(bind=self.__engine)()
 
