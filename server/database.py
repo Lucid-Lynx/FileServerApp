@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime, timedelta
 from uuid import uuid4
+from typing import Type
 
 
 class DataBase:
@@ -25,7 +26,7 @@ class DataBase:
     def __init__(self):
         if not self.__is_inited:
             self.__engine = create_engine(self.__db_string)
-            self.Base.metadata.create_all(self.__engine)
+            self.Base.metadata.create_all(bind=self.__engine)
             self.__is_inited = True
 
     class BaseModel:
@@ -44,34 +45,54 @@ class DataBase:
 
         username = Column(String, name='Username')
         password = Column(String, name='Password')
+        email = Column(String, name='Email')
+        role_id = Column(Integer, ForeignKey('Role.Id', ondelete='CASCADE', onupdate='CASCADE'))
+        role = relationship('Role', back_populates='users')
         sessions = relationship('Session', back_populates='user')
-        roles = relationship('UserRole', back_populates='role')
 
-        def __init__(self, username: str, password: str):
+        def __init__(self, username: str, password: str, email: str, sessions: list = None, role=None):
             super().__init__()
             self.username = username
             self.password = password
+            self.email = email
+
+            if role:
+                self.role = role
+
+            if sessions:
+                self.sessions.extend(sessions)
 
     class Role(BaseModel, Base):
 
         name = Column(String, name='Name')
-        users = relationship('UserRole', back_populates='user')
-        methods = relationship('MethodRole', back_populates='method')
+        users = relationship('User', back_populates='role')
+        methods = relationship('MethodRole', back_populates='role')
 
-        def __init__(self, name: str):
+        def __init__(self, name: str, users: list = None, methods: list = None):
             super().__init__()
             self.name = name
+
+            if users:
+                self.users.extend(users)
+
+            if methods:
+                method_role_list = map(lambda method: DataBase.MethodRole(method=method), methods)
+                self.methods.extend(method_role_list)
 
     class Method(BaseModel, Base):
 
         name = Column(String, name='Name')
         shared = Column(Boolean, name='Shared', default=False)
-        roles = relationship('MethodRole', back_populates='role')
+        roles = relationship('MethodRole', back_populates='method')
 
-        def __init__(self, name: str, shared: bool):
+        def __init__(self, name: str, shared: bool = False, roles: list = None):
             super().__init__()
             self.name = name
             self.shared = shared
+
+            if roles:
+                method_role_list = list(map(lambda role: DataBase.MethodRole(role=role), roles))
+                self.roles.extend(method_role_list)
 
     class Session(BaseModel, Base):
 
@@ -80,30 +101,23 @@ class DataBase:
         user_id = Column(Integer, ForeignKey('User.Id', ondelete='CASCADE', onupdate='CASCADE'))
         user = relationship('User', back_populates='sessions')
 
-        def __init__(self, user_id: int):
+        def __init__(self, user=None):
             super().__init__()
             self.uuid = str(uuid4())
-            self.exp_dt = self.create_dt + timedelta(hours=int(os.environ['PASSWORD_DURATION_HOURS']))
-            self.user_id = user_id
+            self.exp_dt = self.create_dt + timedelta(hours=int(os.environ['SESSION_DURATION_HOURS']))
 
-    class UserRole(Base):
-        __tablename__ = 'UserRole'
-
-        user_id = Column(Integer, ForeignKey('User.Id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-        user = relationship('User', back_populates='roles')
-        role_id = Column(Integer, ForeignKey('Role.Id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-        role = relationship('Role', back_populates='users')
-
-        def __init__(self, user_id: int, role_id: int):
-            self.user_id = user_id
-            self.role_id = role_id
+            if user:
+                self.user = user
 
     class MethodRole(Base):
         __tablename__ = 'MethodRole'
 
-        def __init__(self, method_id: int, role_id: int):
-            self.method_id = method_id
-            self.role_id = role_id
+        def __init__(self, method=None, role=None):
+            if method:
+                self.method = method
+
+            if role:
+                self.role = role
 
         method_id = Column(Integer, ForeignKey('Method.Id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
         method = relationship('Method', back_populates='roles')
@@ -116,4 +130,25 @@ class DataBase:
 
     def create_session(self):
         return sessionmaker(bind=self.__engine)()
+
+    def init_system(self):
+        self.Base.metadata.drop_all(bind=self.__engine)
+        self.Base.metadata.create_all(bind=self.__engine)
+        session = self.create_session()
+        role_visitor = self.Role('Visitor')
+        role_trusted = self.Role('Trusted')
+        role_admin = self.Role('Administrator', users=[self.User('Admin', 'LucidLynx', 'admin@fileserver.su')])
+        session.add_all([
+            self.Method('get_files', roles=[role_visitor, role_trusted, role_admin]),
+            self.Method('get_files_info', roles=[role_visitor, role_trusted, role_admin]),
+            self.Method('create_file', roles=[role_trusted, role_admin]),
+            self.Method('delete_file', roles=[role_trusted, role_admin]),
+            self.Method('add_method', roles=[role_admin]),
+            self.Method('delete_method', roles=[role_admin]),
+            self.Method('set_shared', roles=[role_admin]),
+            self.Method('add_method_to_role', roles=[role_admin]),
+            self.Method('delete_method_from_role', roles=[role_admin]),
+            self.Method('change_user_password', roles=[role_admin]),
+        ])
+        session.commit()
 

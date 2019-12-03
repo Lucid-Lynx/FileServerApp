@@ -15,8 +15,11 @@ def commandline_parser() -> argparse.ArgumentParser:
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--port', default='8080')
-    parser.add_argument('-f', '--folder', default=os.getcwd())
+    parser.add_argument('-p', '--port', default='8080', help='port (default: 8080)')
+    parser.add_argument(
+        '-f', '--folder', default=os.getcwd(),
+        help='working directory (absolute or relative path, default: current app folder FileServer)')
+    parser.add_argument('-i', '--init', action='store_true', help='initialize database')
 
     return parser
 
@@ -28,6 +31,8 @@ def main():
     Command line options:
     -p --port - port (default: 8080).
     -f --folder - working directory (absolute or relative path, default: current app folder FileServer).
+    -i --init - initialize database.
+    -h --help - help.
 
     """
 
@@ -35,7 +40,9 @@ def main():
     namespace = parser.parse_args(sys.argv[1:])
     FileService.change_dir(namespace.folder)
 
-    DataBase()
+    db = DataBase()
+    if namespace.init:
+        db.init_system()
 
     handler = Handler()
     app = web.Application()
