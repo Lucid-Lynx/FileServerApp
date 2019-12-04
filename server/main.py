@@ -2,9 +2,9 @@ import argparse
 import os
 import sys
 from aiohttp import web
-from server.handler import Handler
-from server.file_service import FileService
-from server.database import DataBase
+from .handler import Handler
+from .file_service import FileService
+from .database import DataBase
 
 
 def commandline_parser() -> argparse.ArgumentParser:
@@ -52,10 +52,12 @@ def main():
         web.get('/notes/{filename}', handler.get_file_info),
         web.post('/notes', handler.create_file),
         web.delete('/notes/{filename}', handler.delete_file),
+        web.post('/signup', handler.signup),
+        web.post('/signin', handler.signin),
+        web.get('/logout/{session_id}', handler.logout),
     ])
     web.run_app(app, port=namespace.port)
 
 
 if __name__ == '__main__':
     main()
-

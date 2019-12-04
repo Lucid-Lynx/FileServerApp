@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime, timedelta
 from uuid import uuid4
+from .crypto import CryptoAPI
 
 
 class DataBase:
@@ -42,21 +43,21 @@ class DataBase:
 
     class User(BaseModel, Base):
 
-        username = Column(String, name='Username')
+        email = Column(String, name='Email', unique=True)
         password = Column(String, name='Password')
-        email = Column(String, name='Email')
+        name = Column(String, name='Name')
+        surname = Column(String, name="Surname")
         role_id = Column(Integer, ForeignKey('Role.Id', ondelete='CASCADE', onupdate='CASCADE'))
         role = relationship('Role', back_populates='users')
         sessions = relationship('Session', back_populates='user')
 
-        def __init__(self, username: str, password: str, email: str, sessions: list = None, role=None):
+        def __init__(self, email: str, password: str, name: str, surname: str = None, role=None, sessions: list = None):
             super().__init__()
-            self.username = username
-            self.password = password
             self.email = email
-
-            if role:
-                self.role = role
+            self.password = password
+            self.name = name
+            self.surname = surname
+            self.role = role
 
             if sessions:
                 self.sessions.extend(sessions)
@@ -104,19 +105,14 @@ class DataBase:
             super().__init__()
             self.uuid = str(uuid4())
             self.exp_dt = self.create_dt + timedelta(hours=int(os.environ['SESSION_DURATION_HOURS']))
-
-            if user:
-                self.user = user
+            self.user = user
 
     class MethodRole(Base):
         __tablename__ = 'MethodRole'
 
         def __init__(self, method=None, role=None):
-            if method:
-                self.method = method
-
-            if role:
-                self.role = role
+            self.method = method
+            self.role = role
 
         method_id = Column(Integer, ForeignKey('Method.Id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
         method = relationship('Method', back_populates='roles')
@@ -136,7 +132,9 @@ class DataBase:
         session = self.create_session()
         role_visitor = self.Role('Visitor')
         role_trusted = self.Role('Trusted')
-        role_admin = self.Role('Administrator', users=[self.User('Admin', 'LucidLynx', 'admin@fileserver.su')])
+        role_admin = self.Role(
+            'Administrator',
+            users=[self.User('admin@fileserver.su', CryptoAPI.hash_sha512(os.environ['ADMIN_PASSWORD']), 'Admin')])
         session.add_all([
             self.Method('get_files', roles=[role_visitor, role_trusted, role_admin]),
             self.Method('get_files_info', roles=[role_visitor, role_trusted, role_admin]),
@@ -150,4 +148,3 @@ class DataBase:
             self.Method('change_user_password', roles=[role_admin]),
         ])
         session.commit()
-

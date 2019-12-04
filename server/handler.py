@@ -1,6 +1,7 @@
 import json
 from aiohttp import web
-from server.file_service import FileService
+from .file_service import FileService
+from .users import UsersAPI
 
 
 class Handler:
@@ -73,7 +74,7 @@ class Handler:
 
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
-            {"content": "content string"}.
+            {"content": "content string. Optional"}.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.
@@ -126,3 +127,96 @@ class Handler:
                 'message': '{}'.format(err),
             })
 
+    async def signup(self, request: web.Request) -> web.Response:
+        """Coroutine for signing up user.
+
+        Args:
+            request (Request): aiohttp request, contains JSON in body. JSON format:
+            {
+                "name": "string. Required"
+                "surname": "string. Optional"
+                "email": "string. Required",
+                "password": "string. Required letters and numbers. Quantity of symbols > 8 and < 50. Required",
+                "confirm_password": "string. Must match with password. Required"
+            }.
+
+        Returns:
+            Response: JSON response with success status or error status and error message.
+
+        """
+
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            UsersAPI.signup(**data)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'User with email {} is successfully registered'.format(data.get('email')),
+            })
+
+        except (AssertionError, ValueError) as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    async def signin(self, request: web.Request) -> web.Response:
+        """Coroutine for signing in user.
+
+        Args:
+            request (Request): aiohttp request, contains JSON in body. JSON format:
+            {
+                "email": "string. Required",
+                "password": "string. Required",
+            }.
+
+        Returns:
+            Response: JSON response with success status or error status and error message.
+
+        """
+
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            return web.json_response(data={
+                'status': 'success',
+                'session_id': UsersAPI.signin(**data),
+                'message': 'You successfully signed in system',
+            })
+
+        except (AssertionError, ValueError) as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    async def logout(self, request: web.Request) -> web.Response:
+        """Coroutine for logout.
+
+        Args:
+            request (Request): aiohttp request, contains session_id.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        session_id = request.match_info['session_id']
+        UsersAPI.logout(session_id)
+
+        return web.json_response(data={
+            'status': 'success',
+            'message': 'You successfully logged out',
+        })
