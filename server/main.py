@@ -4,6 +4,7 @@ import sys
 from aiohttp import web
 from server.handler import Handler
 from server.file_service import FileService
+from server.database import DataBase
 
 
 def commandline_parser() -> argparse.ArgumentParser:
@@ -14,8 +15,11 @@ def commandline_parser() -> argparse.ArgumentParser:
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--port', default='8080')
-    parser.add_argument('-f', '--folder', default=os.getcwd())
+    parser.add_argument('-p', '--port', default='8080', help='port (default: 8080)')
+    parser.add_argument(
+        '-f', '--folder', default=os.getcwd(),
+        help='working directory (absolute or relative path, default: current app folder FileServer)')
+    parser.add_argument('-i', '--init', action='store_true', help='initialize database')
 
     return parser
 
@@ -27,12 +31,18 @@ def main():
     Command line options:
     -p --port - port (default: 8080).
     -f --folder - working directory (absolute or relative path, default: current app folder FileServer).
+    -i --init - initialize database.
+    -h --help - help.
 
     """
 
     parser = commandline_parser()
     namespace = parser.parse_args(sys.argv[1:])
     FileService.change_dir(namespace.folder)
+
+    db = DataBase()
+    if namespace.init:
+        db.init_system()
 
     handler = Handler()
     app = web.Application()

@@ -16,5 +16,8 @@ setup(
         'aiodns==2.0.0',
         'pytest==5.1.2',
         'pytest-aiohttp==0.3.0',
+        'psycopg2==2.8.4',
+        'SQLAlchemy==1.3.11',
+        'uuid==1.30',
     ]
 )
