@@ -35,4 +35,3 @@ def convert_date(timestamp: float) -> str:
     """
 
     return datetime.fromtimestamp(timestamp).strftime("%Y.%m.%d %H:%M:%S")
-

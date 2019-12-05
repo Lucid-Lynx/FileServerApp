@@ -108,7 +108,8 @@ class FileService:
             filename = '{}.{}'.format(utils.generate_string(), extension)
 
         with open(filename, 'w') as file_handler:
-            file_handler.write(content)
+            if content:
+                file_handler.write(content)
 
         return {
             'name': filename,
@@ -131,4 +132,3 @@ class FileService:
             'File {} is not exists'.format(full_filename)
 
         os.remove(full_filename)
-
