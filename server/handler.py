@@ -3,6 +3,8 @@ from aiohttp import web
 from .file_service import FileService
 from .users import UsersAPI
 from .role_model import RoleModel
+from .users_sql import UsersSQLAPI
+from .role_model_sql import RoleModelSQL
 
 
 class Handler:
@@ -31,6 +33,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def get_files(self, request: web.Request) -> web.Response:
         """Coroutine for getting info about all files in working directory.
 
@@ -49,6 +53,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def get_file_info(self, request: web.Request) -> web.Response:
         """Coroutine for getting full info about file in working directory.
 
@@ -76,6 +82,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def create_file(self, request: web.Request) -> web.Response:
         """Coroutine for creating file.
 
@@ -110,6 +118,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def delete_file(self, request: web.Request) -> web.Response:
         """Coroutine for deleting file.
 
@@ -236,6 +246,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def add_method(self, request: web.Request) -> web.Response:
         """Coroutine for adding method into role model.
 
@@ -264,6 +276,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def delete_method(self, request: web.Request) -> web.Response:
         """Coroutine for deleting method from role model.
 
@@ -292,6 +306,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def add_role(self, request: web.Request) -> web.Response:
         """Coroutine for adding role into role method.
 
@@ -320,6 +336,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def delete_role(self, request: web.Request) -> web.Response:
         """Coroutine for deleting role from role method.
 
@@ -348,6 +366,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def add_method_to_role(self, request: web.Request) -> web.Response:
         """Coroutine for adding method to role.
 
@@ -386,6 +406,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def delete_method_from_role(self, request: web.Request) -> web.Response:
         """Coroutine for deleting method from role.
 
@@ -425,6 +447,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def change_shared_prop(self, request: web.Request) -> web.Response:
         """Coroutine for changing shared property of method.
 
@@ -464,6 +488,8 @@ class Handler:
 
     @UsersAPI.authorized
     @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
     async def change_user_role(self, request: web.Request) -> web.Response:
         """Coroutine for setting new role to user .
 
