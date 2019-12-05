@@ -1,4 +1,6 @@
 import re
+from datetime import datetime
+from aiohttp import web
 from .database import DataBase
 from .crypto import CryptoAPI
 
@@ -10,8 +12,34 @@ PASSWORD_REGEX = re.compile(r'^\w{8,50}$')
 class UsersAPI:
 
     @staticmethod
-    def signup(**kwargs):
+    def authorized(func):
 
+        def wrapper(request: web.Request) -> web.Response:
+            session_id = request.match_info['session_id']
+
+            try:
+                db = DataBase()
+                db_session = db.create_session()
+                session = db_session.query(db.Session).filter_by(uuid=session_id).first()
+                assert session, 'Session expired. Please, sign in again'
+
+                if session.exp_dt < datetime.now():
+                    session.delete()
+                    db_session.commit()
+                    raise AssertionError('Session expired. Please, sign in again')
+
+                return func(request)
+
+            except AssertionError as err:
+                return web.json_response(data={
+                    'status': 'error',
+                    'message': '{}'.format(err),
+                })
+
+        return wrapper
+
+    @staticmethod
+    def signup(**kwargs):
         email = kwargs.get('email')
         password = kwargs.get('password')
         confirm_password = kwargs.get('confirm_password')
@@ -42,7 +70,6 @@ class UsersAPI:
 
     @staticmethod
     def signin(**kwargs) -> str:
-
         email = kwargs.get('email')
         password = kwargs.get('password')
 
@@ -64,7 +91,6 @@ class UsersAPI:
 
     @staticmethod
     def logout(session_id: str):
-
         db = DataBase()
         db_session = db.create_session()
         db_session.query(db.Session).filter_by(uuid=session_id).delete()

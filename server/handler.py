@@ -2,6 +2,7 @@ import json
 from aiohttp import web
 from .file_service import FileService
 from .users import UsersAPI
+from .role_model import RoleModel
 
 
 class Handler:
@@ -28,6 +29,8 @@ class Handler:
         }
         return web.json_response(data)
 
+    @UsersAPI.authorized
+    @RoleModel.role_model
     async def get_files(self, request: web.Request) -> web.Response:
         """Coroutine for getting info about all files in working directory.
 
@@ -44,6 +47,8 @@ class Handler:
             'data': FileService.get_files(),
         })
 
+    @UsersAPI.authorized
+    @RoleModel.role_model
     async def get_file_info(self, request: web.Request) -> web.Response:
         """Coroutine for getting full info about file in working directory.
 
@@ -69,6 +74,8 @@ class Handler:
                 'message': '{}'.format(err),
             })
 
+    @UsersAPI.authorized
+    @RoleModel.role_model
     async def create_file(self, request: web.Request) -> web.Response:
         """Coroutine for creating file.
 
@@ -101,6 +108,8 @@ class Handler:
                 'message': '{}'.format(err),
             })
 
+    @UsersAPI.authorized
+    @RoleModel.role_model
     async def delete_file(self, request: web.Request) -> web.Response:
         """Coroutine for deleting file.
 
@@ -220,3 +229,270 @@ class Handler:
             'status': 'success',
             'message': 'You successfully logged out',
         })
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    async def add_method(self, request: web.Request) -> web.Response:
+        """Coroutine for adding method into role model.
+
+        Args:
+            request (Request): aiohttp request, contains method name.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        method_name = request.match_info['method_name']
+
+        try:
+            RoleModel.add_method(method_name)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully added method {}'.format(method_name),
+            })
+
+        except AssertionError as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    async def delete_method(self, request: web.Request) -> web.Response:
+        """Coroutine for deleting method from role model.
+
+        Args:
+            request (Request): aiohttp request, contains method name.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        method_name = request.match_info['method_name']
+
+        try:
+            RoleModel.delete_method(method_name)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully deleted method {}'.format(method_name),
+            })
+
+        except AssertionError as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    async def add_role(self, request: web.Request) -> web.Response:
+        """Coroutine for adding role into role method.
+
+        Args:
+            request (Request): aiohttp request, contains role name.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        role_name = request.match_info['role_name']
+
+        try:
+            RoleModel.add_role(role_name)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully added role {}'.format(role_name),
+            })
+
+        except AssertionError as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    async def delete_role(self, request: web.Request) -> web.Response:
+        """Coroutine for deleting role from role method.
+
+        Args:
+            request (Request): aiohttp request, contains role name.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        role_name = request.match_info['role_name']
+
+        try:
+            RoleModel.add_role(role_name)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully deleted role {}'.format(role_name),
+            })
+
+        except AssertionError as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    async def add_method_to_role(self, request: web.Request) -> web.Response:
+        """Coroutine for adding method to role.
+
+        Args:
+            request (Request): aiohttp request, contains JSON in body. JSON format:
+            {
+                "method": "string. Required",
+                "role": "string. Required",
+            }.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            RoleModel.add_method_to_role(**data)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully added method {} to role {}'.format(data.get('method'), data.get('role')),
+            })
+
+        except (AssertionError, ValueError) as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    async def delete_method_from_role(self, request: web.Request) -> web.Response:
+        """Coroutine for deleting method from role.
+
+        Args:
+            request (Request): aiohttp request, contains JSON in body. JSON format:
+            {
+                "method": "string. Required",
+                "role": "string. Required",
+            }.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            RoleModel.delete_method_from_role(**data)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully deleted method {} from role {}'.format(
+                    data.get('method'), data.get('role')),
+            })
+
+        except (AssertionError, ValueError) as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    async def change_shared_prop(self, request: web.Request) -> web.Response:
+        """Coroutine for changing shared property of method.
+
+        Args:
+            request (Request): aiohttp request, contains JSON in body. JSON format:
+            {
+                "method": "string. Required",
+                "value": "boolean. Required",
+            }.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            RoleModel.change_shared_prop(**data)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully changed shared property of method {}. Property is {}'.format(
+                    data.get('method'), 'enabled' if data.get('value') else 'disabled'),
+            })
+
+        except (AssertionError, ValueError) as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    async def change_user_role(self, request: web.Request) -> web.Response:
+        """Coroutine for setting new role to user .
+
+        Args:
+            request (Request): aiohttp request, contains JSON in body. JSON format:
+            {
+                "email": "string. Required",
+                "role": "string. Required",
+            }.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            RoleModel.change_user_role(**data)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully changed role of user with email {}. New role is {}'.format(
+                    data.get('email'), data.get('role')),
+            })
+
+        except (AssertionError, ValueError) as err:
+            return web.json_response(data={
+                'status': 'error',
+                'message': '{}'.format(err),
+            })

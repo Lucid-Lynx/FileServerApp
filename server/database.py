@@ -64,7 +64,7 @@ class DataBase:
 
     class Role(BaseModel, Base):
 
-        name = Column(String, name='Name')
+        name = Column(String, name='Name', unique=True)
         users = relationship('User', back_populates='role')
         methods = relationship('MethodRole', back_populates='role')
 
@@ -81,7 +81,7 @@ class DataBase:
 
     class Method(BaseModel, Base):
 
-        name = Column(String, name='Name')
+        name = Column(String, name='Name', unique=True)
         shared = Column(Boolean, name='Shared', default=False)
         roles = relationship('MethodRole', back_populates='method')
 
@@ -108,6 +108,7 @@ class DataBase:
             self.user = user
 
     class MethodRole(Base):
+
         __tablename__ = 'MethodRole'
 
         def __init__(self, method=None, role=None):
@@ -142,9 +143,11 @@ class DataBase:
             self.Method('delete_file', roles=[role_trusted, role_admin]),
             self.Method('add_method', roles=[role_admin]),
             self.Method('delete_method', roles=[role_admin]),
-            self.Method('set_shared', roles=[role_admin]),
+            self.Method('add_role', roles=[role_admin]),
+            self.Method('delete_role', roles=[role_admin]),
             self.Method('add_method_to_role', roles=[role_admin]),
             self.Method('delete_method_from_role', roles=[role_admin]),
-            self.Method('change_user_password', roles=[role_admin]),
+            self.Method('change_shared_prop', roles=[role_admin]),
+            self.Method('change_user_role', roles=[role_admin]),
         ])
         session.commit()
