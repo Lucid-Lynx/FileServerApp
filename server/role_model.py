@@ -19,6 +19,7 @@ class RoleModel:
                 db_session = db.create_session()
                 session = db_session.query(db.Session).filter_by(uuid=session_id).first()
                 assert session, 'Session expired. Please, sign in again'
+                assert session.user.role, 'User is not attached to role'
                 method = db_session.query(db.Method).filter_by(name=func.__name__).first()
 
                 if method and not method.shared:
