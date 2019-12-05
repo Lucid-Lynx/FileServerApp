@@ -14,8 +14,12 @@ class UsersAPI:
     @staticmethod
     def authorized(func):
 
-        def wrapper(request: web.Request) -> web.Response:
-            session_id = request.match_info['session_id']
+        def wrapper(*args, **kwargs) -> web.Response:
+            request = args[1]
+            session_id = request.headers.get('Authorization')
+
+            if not session_id:
+                raise web.HTTPForbidden()
 
             try:
                 db = DataBase()
@@ -24,11 +28,11 @@ class UsersAPI:
                 assert session, 'Session expired. Please, sign in again'
 
                 if session.exp_dt < datetime.now():
-                    session.delete()
+                    db_session.delete(session)
                     db_session.commit()
                     raise AssertionError('Session expired. Please, sign in again')
 
-                return func(request)
+                return func(*args, **kwargs)
 
             except AssertionError as err:
                 return web.json_response(data={

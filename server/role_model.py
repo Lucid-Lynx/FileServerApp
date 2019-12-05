@@ -7,8 +7,12 @@ class RoleModel:
     @staticmethod
     def role_model(func):
 
-        def wrapper(request: web.Request) -> web.Response:
-            session_id = request.match_info['session_id']
+        def wrapper(*args, **kwargs) -> web.Response:
+            request = args[1]
+            session_id = request.headers.get('Authorization')
+
+            if not session_id:
+                raise web.HTTPForbidden()
 
             try:
                 db = DataBase()
@@ -17,11 +21,11 @@ class RoleModel:
                 assert session, 'Session expired. Please, sign in again'
                 method = db_session.query(db.Method).filter_by(name=func.__name__).first()
 
-                if method:
+                if method and not method.shared:
                     relations = set(filter(lambda rel: rel.role_id == session.user.role.id, method.roles))
                     assert len(relations) > 0, 'Access denied'
 
-                return func(request)
+                return func(*args, **kwargs)
 
             except AssertionError as err:
                 return web.json_response(data={
@@ -46,7 +50,7 @@ class RoleModel:
         db_session = db.create_session()
         method = db_session.query(db.Method).filter_by(name=method_name).first()
         assert method, 'Method {} is not found'.format(method_name)
-        method.delete()
+        db_session.delete(method)
         db_session.commit()
 
     @staticmethod
@@ -65,7 +69,7 @@ class RoleModel:
         role = db_session.query(db.Role).filter_by(name=role_name).first()
         assert role, 'Role {} is not found'.format(role_name)
         assert not len(role.users), "You can't delete role with users"
-        role.delete()
+        db_session.delete(role)
         db_session.commit()
 
     @staticmethod
@@ -103,8 +107,7 @@ class RoleModel:
         assert role, 'Role {} is not found'.format(role_name)
         relations = set(filter(lambda rel: rel.role_id == role.id, method.roles))
         assert len(relations), 'Method {} is not found in role {}'.format(method_name, role_name)
-        # role.methods.pop(role.methods.index(relations[0]))
-        role.methods = list(set(role.methods).remove(relations[0]))
+        db_session.delete(list(relations)[0])
         db_session.commit()
 
     @staticmethod
@@ -113,7 +116,7 @@ class RoleModel:
         value = kwargs.get('value')
 
         assert method_name and (method_name := method_name.strip()), 'Method name is not set'
-        assert value and (value := value.strip()), 'Value is not set'
+        assert value is not None, 'Value is not set'
         assert isinstance(value, bool), 'Value should be boolean'
 
         db = DataBase()

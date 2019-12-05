@@ -222,7 +222,11 @@ class Handler:
 
         """
 
-        session_id = request.match_info['session_id']
+        session_id = request.headers.get('Authorization')
+
+        if not session_id:
+            raise web.HTTPForbidden()
+
         UsersAPI.logout(session_id)
 
         return web.json_response(data={
@@ -330,7 +334,7 @@ class Handler:
         role_name = request.match_info['role_name']
 
         try:
-            RoleModel.add_role(role_name)
+            RoleModel.delete_role(role_name)
             return web.json_response(data={
                 'status': 'success',
                 'message': 'You successfully deleted role {}'.format(role_name),
