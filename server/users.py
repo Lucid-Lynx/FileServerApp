@@ -68,7 +68,7 @@ class UsersAPI:
         db_session = db.create_session()
         existed_user = db_session.query(db.User).filter_by(email=email).first()
         assert not existed_user, 'User with email {} is already exists'.format(email)
-        role_visitor = db_session.query(db.Role).filter_by(name="Visitor").first()
+        role_visitor = db_session.query(db.Role).filter_by(name="visitor").first()
         db_session.add(db.User(email, hashed_password, name, surname, role=role_visitor))
         db_session.commit()
 
@@ -89,6 +89,7 @@ class UsersAPI:
         assert user and hashed_password == user.password, 'Invalid login or password'.format(email)
         user_session = db.Session(user)
         db_session.add(user_session)
+        user.last_login_dt = datetime.now()
         db_session.commit()
         
         return user_session.uuid

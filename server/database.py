@@ -47,6 +47,7 @@ class DataBase:
         password = Column(String, name='Password')
         name = Column(String, name='Name')
         surname = Column(String, name="Surname")
+        last_login_dt = Column(DateTime, name="Last Login Date")
         role_id = Column(Integer, ForeignKey('Role.Id', ondelete='CASCADE', onupdate='CASCADE'))
         role = relationship('Role', back_populates='users')
         sessions = relationship('Session', back_populates='user')
@@ -131,10 +132,10 @@ class DataBase:
         self.Base.metadata.drop_all(bind=self.__engine)
         self.Base.metadata.create_all(bind=self.__engine)
         session = self.create_session()
-        role_visitor = self.Role('Visitor')
-        role_trusted = self.Role('Trusted')
+        role_visitor = self.Role('visitor')
+        role_trusted = self.Role('trusted')
         role_admin = self.Role(
-            'Administrator',
+            'admin',
             users=[self.User('admin@fileserver.su', CryptoAPI.hash_sha512(os.environ['ADMIN_PASSWORD']), 'Admin')])
         session.add_all([
             self.Method('get_files', roles=[role_visitor, role_trusted, role_admin]),

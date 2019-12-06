@@ -174,6 +174,7 @@ class Handler:
         try:
             data = json.loads(result)
             UsersAPI.signup(**data)
+            # UsersSQLAPI.signup(**data)
             return web.json_response(data={
                 'status': 'success',
                 'message': 'User with email {} is successfully registered'.format(data.get('email')),
@@ -212,6 +213,7 @@ class Handler:
             return web.json_response(data={
                 'status': 'success',
                 'session_id': UsersAPI.signin(**data),
+                # 'session_id': UsersSQLAPI.signin(**data),
                 'message': 'You successfully signed in system',
             })
 
@@ -238,6 +240,7 @@ class Handler:
             raise web.HTTPForbidden()
 
         UsersAPI.logout(session_id)
+        # UsersSQLAPI.logout(session_id)
 
         return web.json_response(data={
             'status': 'success',
