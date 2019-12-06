@@ -18,6 +18,7 @@ conn_params = {
         'password': os.environ['DB_PASSWORD'],
         'host': os.environ['DB_HOST']
     }
+dt_format = os.environ['DATE_FORMAT']
 
 
 class UsersSQLAPI:
@@ -83,12 +84,13 @@ class UsersSQLAPI:
                 cursor.execute(sql.SQL('SELECT * FROM public."User" WHERE "Email" = \'{}\''.format(email)))
                 existed_user = cursor.fetchone()
                 assert not existed_user, 'User with email {} is already exists'.format(email)
-                cursor.execute(sql.SQL('SELECT * FROM public."Role" WHERE "Name" = \'Visitor\''))
+                cursor.execute(sql.SQL('SELECT * FROM public."Role" WHERE "Name" = \'visitor\''))
                 role_visitor = cursor.fetchone()
                 cursor.execute(sql.SQL(
                     'INSERT INTO public."User" ("Create Date", "Email", "Password", "Name", "Surname", "role_id") \
                     VALUES(\'{}\', \'{}\', \'{}\', \'{}\', \'{}\', {})'.format(
-                        datetime.strftime(datetime.now()), email, hashed_password, name, surname, role_visitor['Id'])))
+                        datetime.strftime(datetime.now(), dt_format), email, hashed_password, name, surname,
+                        role_visitor['Id'])))
                 conn.commit()
 
     @staticmethod
@@ -109,11 +111,13 @@ class UsersSQLAPI:
                 user = cursor.fetchone()
                 assert user and hashed_password == user['Password'], 'Invalid login or password'.format(email)
                 cursor.execute(sql.SQL(
-                    'INSERT INTO public."Session" ("Create Date", "UUID", "Expiration Date", "role_id") \
+                    'INSERT INTO public."Session" ("Create Date", "UUID", "Expiration Date", "user_id") \
                     VALUES(\'{}\', \'{}\', \'{}\', {})'.format(
-                        datetime.strftime(datetime.now()), str(uuid_str),
-                        datetime.strftime(datetime.now()) + timedelta(hours=int(os.environ['SESSION_DURATION_HOURS'])),
-                        user['Id'])))
+                        datetime.strftime(datetime.now(), dt_format), str(uuid_str),
+                        datetime.strftime(datetime.now() + timedelta(
+                            hours=int(os.environ['SESSION_DURATION_HOURS'])), dt_format), user['Id'])))
+                cursor.execute(sql.SQL('UPDATE public."User" SET "Last Login Date" = \'{}\' WHERE "Id" = {}'.format(
+                    datetime.strftime(datetime.now(), dt_format), user['Id'])))
                 conn.commit()
         
         return uuid_str
