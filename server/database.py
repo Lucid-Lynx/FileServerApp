@@ -50,7 +50,7 @@ class DataBase:
         last_login_dt = Column(DateTime, name="Last Login Date")
         role_id = Column(Integer, ForeignKey('Role.Id', ondelete='CASCADE', onupdate='CASCADE'))
         role = relationship('Role', back_populates='users')
-        sessions = relationship('Session', back_populates='user')
+        sessions = relationship('Session', back_populates='user', cascade='all, delete-orphan')
 
         def __init__(self, email: str, password: str, name: str, surname: str = None, role=None, sessions: list = None):
             super().__init__()
@@ -66,7 +66,7 @@ class DataBase:
     class Role(BaseModel, Base):
 
         name = Column(String, name='Name', unique=True)
-        users = relationship('User', back_populates='role')
+        users = relationship('User', back_populates='role', cascade='all, delete-orphan')
         methods = relationship('MethodRole', back_populates='role')
 
         def __init__(self, name: str, users: list = None, methods: list = None):
@@ -139,7 +139,7 @@ class DataBase:
             users=[self.User('admin@fileserver.su', CryptoAPI.hash_sha512(os.environ['ADMIN_PASSWORD']), 'Admin')])
         session.add_all([
             self.Method('get_files', roles=[role_visitor, role_trusted, role_admin]),
-            self.Method('get_files_info', roles=[role_visitor, role_trusted, role_admin]),
+            self.Method('get_file_info', roles=[role_visitor, role_trusted, role_admin]),
             self.Method('create_file', roles=[role_trusted, role_admin]),
             self.Method('delete_file', roles=[role_trusted, role_admin]),
             self.Method('add_method', roles=[role_admin]),
