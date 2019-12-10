@@ -100,4 +100,3 @@ class UsersAPI:
         db_session = db.create_session()
         db_session.query(db.Session).filter_by(uuid=session_id).delete()
         db_session.commit()
-
