@@ -5,6 +5,7 @@ import logging
 from aiohttp import web
 from server.handler import Handler
 from server.database import DataBase
+from server.crypto import CryptoAPI
 
 logger = logging.getLogger("Test Logger")
 
@@ -60,19 +61,23 @@ def client(loop, aiohttp_client):
     return loop.run_until_complete(aiohttp_client(app))
 
 
-@pytest.fixture(scope='class', autouse=True)
+@pytest.fixture(scope='function', autouse=True)
 def prepare_data():
     logger.info('Prepare test data in database')
     db = DataBase()
     db_session = db.create_session()
-    test_methods = db_session.query(db.Method).filter(db.Method.name.in_([
+    testing_methods = db_session.query(db.Method).filter(db.Method.name.in_([
         'get_files', 'get_file_info', 'create_file', 'delete_file', 'add_method', 'delete_method', 'add_role',
         'delete_role', 'add_method_to_role', 'delete_method_from_role', 'change_shared_prop', 'change_user_role',
     ])).all()
+    test_method = db.Method('test_method_1')
+    testing_methods.append(test_method)
     test_role_denied = db.Role('test_role_1')
-    test_role_allowed = db.Role('test_role_2', methods=test_methods)
-    session_denied = db.Session(db.User('user1@test.su', '1test1234', 'User1', role=test_role_denied))
-    session_allowed = db.Session(db.User('user2@test.su', '2test1234', 'User2', role=test_role_allowed))
+    test_role_allowed = db.Role('test_role_2', methods=testing_methods)
+    session_denied = db.Session(
+        db.User('user1@test.su', CryptoAPI.hash_sha512('1test1234'), 'User1', role=test_role_denied))
+    session_allowed = db.Session(
+        db.User('user2@test.su', CryptoAPI.hash_sha512('2test1234'), 'User2', role=test_role_allowed))
     db_session.add_all([session_denied, session_allowed])
     db_session.commit()
 
@@ -82,6 +87,7 @@ def prepare_data():
     db_session.query(db.MethodRole).filter_by(role_id=test_role_allowed.id).delete()
     db_session.delete(test_role_denied)
     db_session.delete(test_role_allowed)
+    db_session.delete(test_method)
     db_session.commit()
 
 
@@ -96,12 +102,20 @@ class TestSuite:
     async def test_get_files(self, client, prepare_data):
         session_denied, session_allowed = tuple(prepare_data)
 
+        logging.info('Test request. User is not logged in')
+        resp = await client.get('/notes')
+        assert resp.status == 403
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
         resp = await client.get('/notes', headers={'Authorization': session_denied.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'error'
         assert result.get('message') == 'Access denied'
+        logging.info('Test is succeeded')
 
+        logging.info('Test request. Access allowed')
         resp = await client.get('/notes', headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
@@ -114,17 +128,26 @@ class TestSuite:
         assert test_file_1 in exists_files
         assert test_file_2 in exists_files
         assert not (test_file_3 in exists_files)
+        logging.info('Test is succeeded')
 
     async def test_get_file_info(self, client, prepare_data):
         session_denied, session_allowed = tuple(prepare_data)
         test_file_part = test_file_1.split('.')[0]
 
+        logging.info('Test request. User is not logged in')
+        resp = await client.get('/notes/{}'.format(test_file_part))
+        assert resp.status == 403
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
         resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_denied.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'error'
         assert result.get('message') == 'Access denied'
+        logging.info('Test is succeeded')
 
+        logging.info('Test request. Access allowed')
         resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
@@ -134,45 +157,9 @@ class TestSuite:
         assert filename == test_file_1
         content = result.get('data').get('content')
         assert content == test_content
+        logging.info('Test is succeeded')
 
-    async def test_create_file(self, client, prepare_data):
-        session_denied, session_allowed = tuple(prepare_data)
-
-        resp = await client.post(
-            '/notes', json={'content': test_content}, headers={'Authorization': session_denied.uuid})
-        assert resp.status == 200
-        result = json.loads(await resp.text())
-        assert result.get('status') == 'error'
-        assert result.get('message') == 'Access denied'
-
-        resp = await client.post(
-            '/notes', json={'content': test_content}, headers={'Authorization': session_allowed.uuid})
-        assert resp.status == 200
-        result = json.loads(await resp.text())
-        assert result.get('status') == 'success'
-        filename = result.get('data').get('name')
-        assert os.path.exists(filename)
-
-    async def test_delete_file(self, client, prepare_data):
-        session_denied, session_allowed = tuple(prepare_data)
-        test_file_part = test_file_2.split('.')[0]
-
-        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_denied.uuid})
-        assert resp.status == 200
-        result = json.loads(await resp.text())
-        assert result.get('status') == 'error'
-        assert result.get('message') == 'Access denied'
-
-        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
-        assert resp.status == 200
-        result = json.loads(await resp.text())
-        assert result.get('status') == 'success'
-        assert result.get('message') == 'File {} is successfully deleted'.format(test_file_part)
-
-    async def test_get_file_info_not_exists(self, client, prepare_data):
-        session_denied, session_allowed = tuple(prepare_data)
         test_file_part = test_file_3.split('.')[0]
-
         resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
@@ -180,13 +167,326 @@ class TestSuite:
         assert result.get('message') == 'File {} is not exists'.format(test_file_3)
         assert not os.path.exists(test_file_3)
 
-    async def test_delete_file_not_exists(self, client, prepare_data):
+    async def test_create_file(self, client, prepare_data):
         session_denied, session_allowed = tuple(prepare_data)
-        test_file_part = test_file_3.split('.')[0]
 
+        logging.info('Test request. User is not logged in')
+        resp = await client.post('/notes', json={'content': test_content})
+        assert resp.status == 403
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.post(
+            '/notes', json={'content': test_content}, headers={'Authorization': session_denied.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed')
+        resp = await client.post(
+            '/notes', json={'content': test_content}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists(filename)
+        logging.info('Test is succeeded')
+
+    async def test_delete_file(self, client, prepare_data):
+        session_denied, session_allowed = tuple(prepare_data)
+        test_file_part = test_file_2.split('.')[0]
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.delete('/notes/{}'.format(test_file_part))
+        assert resp.status == 403
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_denied.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed')
+        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'File {} is successfully deleted'.format(test_file_part)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. File is not exist')
+        test_file_part = test_file_3.split('.')[0]
         resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'error'
         assert result.get('message') == 'File {} is not exists'.format(test_file_3)
         assert not os.path.exists(test_file_3)
+        logging.info('Test is succeeded')
+
+    async def test_signup(self, client):
+        test_email = 'user3@test.su'
+        db = DataBase()
+        db_session = db.create_session()
+
+        logging.info('Test request. User is not exists')
+        resp = await client.post('/signup', json={
+            'email': test_email,
+            'password': '3test1234',
+            'confirm_password': '3test1234',
+            'name': 'User3',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'User with email {} is successfully registered'.format(test_email)
+        assert db_session.query(db.User).filter_by(email=test_email).first()
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Email is not set')
+        resp = await client.post('/signup', json={
+            'password': '3test1234',
+            'confirm_password': '3test1234',
+            'name': 'User3',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Email is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Invalid email format')
+        resp = await client.post('/signup', json={
+            'email': 'user3',
+            'password': '3test1234',
+            'confirm_password': '3test1234',
+            'name': 'User3',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Invalid email format'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Password is not set')
+        resp = await client.post('/signup', json={
+            'email': test_email,
+            'name': 'User3',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Password is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Invalid password')
+        resp = await client.post('/signup', json={
+            'email': test_email,
+            'password': 'test',
+            'confirm_password': '3test1234',
+            'name': 'User3',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == \
+            'Invalid password. Password should contain letters, digits and will be 8 to 50 characters long'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Password is not confirmed')
+        resp = await client.post('/signup', json={
+            'email': test_email,
+            'password': '3test1234',
+            'name': 'User3',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Please, repeat the password'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Passwords are not match')
+        resp = await client.post('/signup', json={
+            'email': test_email,
+            'password': '3test1234',
+            'confirm_password': '3test12345',
+            'name': 'User3',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Passwords are not match'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Name is not set')
+        resp = await client.post('/signup', json={
+            'email': test_email,
+            'password': '3test1234',
+            'confirm_password': '3test1234',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Name is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is exists')
+        test_email_exists = 'user1@test.su'
+        resp = await client.post('/signup', json={
+            'email': test_email_exists,
+            'password': '3test1234',
+            'confirm_password': '3test1234',
+            'name': 'User3',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'User with email {} is already exists'.format(test_email_exists)
+        logging.info('Test is succeeded')
+
+        db_session.query(db.User).filter_by(email=test_email).delete()
+        db_session.commit()
+
+    async def test_signin(self, client):
+        test_email = 'user1@test.su'
+        db = DataBase()
+        db_session = db.create_session()
+        test_user = db_session.query(db.User).filter_by(email=test_email).first()
+
+        logging.info('Test request. User is exists')
+        resp = await client.post('/signin', json={
+            'email': test_email,
+            'password': '1test1234',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'You successfully signed in system'
+        assert db_session.query(db.Session).filter_by(user=test_user).first()
+        assert len(db_session.query(db.Session).filter_by(user=test_user).all()) > 1
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Email is not set')
+        resp = await client.post('/signin', json={
+            'password': '1test1234',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Email is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Invalid email format')
+        resp = await client.post('/signin', json={
+            'email': 'user1',
+            'password': '1test1234',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Invalid email format'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Password is not set')
+        resp = await client.post('/signin', json={
+            'email': test_email,
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Password is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Invalid password')
+        resp = await client.post('/signin', json={
+            'email': test_email,
+            'password': 'test',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Invalid login or password'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is not exists')
+        resp = await client.post('/signin', json={
+            'email': 'user3@test.su',
+            'password': 'test',
+        })
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Invalid login or password'
+        logging.info('Test is succeeded')
+
+    async def test_logout(self, client, prepare_data):
+        session_denied, session_allowed = tuple(prepare_data)
+        db = DataBase()
+        db_session = db.create_session()
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.get('/logout')
+        assert resp.status == 403
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is logged in')
+        resp = await client.get('/logout', headers={'Authorization': session_denied.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'You successfully logged out'
+        assert not db_session.query(db.Session).filter_by(uuid=session_denied.uuid).first()
+        logging.info('Test is succeeded')
+
+    async def test_add_method(self, client, prepare_data):
+        session_denied, session_allowed = tuple(prepare_data)
+        test_method_name = 'test_method_2'
+        db = DataBase()
+        db_session = db.create_session()
+
+        logging.info('Test request. Method not allowed')
+        resp = await client.get('/method/{}'.format(test_method_name))
+        assert resp.status == 405
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.put('/method/{}'.format(test_method_name))
+        assert resp.status == 403
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.put(
+            '/method/{}'.format(test_method_name), headers={'Authorization': session_denied.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method is not exists')
+        resp = await client.put(
+            '/method/{}'.format(test_method_name), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'You successfully added method {}'.format(test_method_name)
+        assert db_session.query(db.Method).filter_by(name=test_method_name).first()
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method is exists')
+        test_method_name_exists = 'test_method_1'
+        resp = await client.put(
+            '/method/{}'.format(test_method_name_exists), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'error'
+        assert result.get('message') == 'Method {} is already exists'.format(test_method_name_exists)
+        logging.info('Test is succeeded')
+
+        db_session.query(db.Method).filter_by(name=test_method_name).delete()
+        db_session.commit()

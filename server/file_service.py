@@ -88,7 +88,7 @@ class FileService:
         return data
 
     @staticmethod
-    def create_file(content: str) -> typing.Dict[str, str]:
+    def create_file(content: str = None) -> typing.Dict[str, str]:
         """Create new .txt file.
 
         Method generates name of file from random string with digits and latin letters.
