@@ -19,26 +19,21 @@ class UsersAPI:
             session_id = request.headers.get('Authorization')
 
             if not session_id:
-                raise web.HTTPForbidden()
+                raise web.HTTPUnauthorized(text='Unauthorized request')
 
-            try:
-                db = DataBase()
-                db_session = db.create_session()
-                session = db_session.query(db.Session).filter_by(uuid=session_id).first()
-                assert session, 'Session expired. Please, sign in again'
+            db = DataBase()
+            db_session = db.create_session()
+            session = db_session.query(db.Session).filter_by(uuid=session_id).first()
 
-                if session.exp_dt < datetime.now():
-                    db_session.delete(session)
-                    db_session.commit()
-                    raise AssertionError('Session expired. Please, sign in again')
+            if not session:
+                raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
 
-                return func(*args, **kwargs)
+            if session.exp_dt < datetime.now():
+                db_session.delete(session)
+                db_session.commit()
+                raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
 
-            except AssertionError as err:
-                return web.json_response(data={
-                    'status': 'error',
-                    'message': '{}'.format(err),
-                })
+            return func(*args, **kwargs)
 
         return wrapper
 
@@ -67,7 +62,7 @@ class UsersAPI:
         db = DataBase()
         db_session = db.create_session()
         existed_user = db_session.query(db.User).filter_by(email=email).first()
-        assert not existed_user, 'User with email {} is already exists'.format(email)
+        assert not existed_user, 'User with email {} already exists'.format(email)
         role_visitor = db_session.query(db.Role).filter_by(name="visitor").first()
         db_session.add(db.User(email, hashed_password, name, surname, role=role_visitor))
         db_session.commit()

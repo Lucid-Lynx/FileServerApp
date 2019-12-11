@@ -31,29 +31,24 @@ class UsersSQLAPI:
             session_id = request.headers.get('Authorization')
 
             if not session_id:
-                raise web.HTTPForbidden()
+                raise web.HTTPUnauthorized(text='Unauthorized request')
 
-            try:
-                with closing(psycopg2.connect(**conn_params)) as conn:
-                    with conn.cursor(cursor_factory=DictCursor) as cursor:
-                        cursor.execute(sql.SQL('SELECT * FROM public."Session" WHERE "UUID" = \'{}\''.format(
-                            session_id)))
-                        session = cursor.fetchone()
-                        assert session, 'Session expired. Please, sign in again'
+            with closing(psycopg2.connect(**conn_params)) as conn:
+                with conn.cursor(cursor_factory=DictCursor) as cursor:
+                    cursor.execute(sql.SQL('SELECT * FROM public."Session" WHERE "UUID" = \'{}\''.format(
+                        session_id)))
+                    session = cursor.fetchone()
 
-                        if session['Expiration Date'] < datetime.now():
-                            cursor.execute(
-                                sql.SQL('DELETE FROM public."Session" WHERE "Id" = \'{}\''.format(session['Id'])))
-                            conn.commit()
-                            raise AssertionError('Session expired. Please, sign in again')
+                    if not session:
+                        raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
 
-                return func(*args, **kwargs)
+                    if session['Expiration Date'] < datetime.now():
+                        cursor.execute(
+                            sql.SQL('DELETE FROM public."Session" WHERE "Id" = \'{}\''.format(session['Id'])))
+                        conn.commit()
+                        raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
 
-            except AssertionError as err:
-                return web.json_response(data={
-                    'status': 'error',
-                    'message': '{}'.format(err),
-                })
+            return func(*args, **kwargs)
 
         return wrapper
 
@@ -83,7 +78,7 @@ class UsersSQLAPI:
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute(sql.SQL('SELECT * FROM public."User" WHERE "Email" = \'{}\''.format(email)))
                 existed_user = cursor.fetchone()
-                assert not existed_user, 'User with email {} is already exists'.format(email)
+                assert not existed_user, 'User with email {} already exists'.format(email)
                 cursor.execute(sql.SQL('SELECT * FROM public."Role" WHERE "Name" = \'visitor\''))
                 role_visitor = cursor.fetchone()
                 cursor.execute(sql.SQL(

@@ -23,34 +23,35 @@ class RoleModelSQL:
             session_id = request.headers.get('Authorization')
 
             if not session_id:
-                raise web.HTTPForbidden()
+                raise web.HTTPUnauthorized(text='Unauthorized request')
 
-            try:
-                with closing(psycopg2.connect(**conn_params)) as conn:
-                    with conn.cursor(cursor_factory=DictCursor) as cursor:
+            with closing(psycopg2.connect(**conn_params)) as conn:
+                with conn.cursor(cursor_factory=DictCursor) as cursor:
+                    cursor.execute(sql.SQL(
+                        'SELECT * FROM public."Session" AS S JOIN public."User" AS U '
+                        'ON S."user_id" = U."Id" WHERE "UUID" = \'{}\''.format(session_id)))
+                    session = cursor.fetchone()
+
+                    if not session:
+                        raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
+
+                    if not session.get('role_id'):
+                        raise web.HTTPForbidden(text='User is not attached to role')
+
+                    cursor.execute(sql.SQL('SELECT * FROM public."Method" WHERE "Name" = \'{}\''.format(
+                        func.__name__)))
+                    method = cursor.fetchone()
+
+                    if method and not method['Shared']:
                         cursor.execute(sql.SQL(
-                            'SELECT * FROM public."Session" AS S JOIN public."User" AS U '
-                            'ON S."user_id" = U."Id" WHERE "UUID" = \'{}\''.format(session_id)))
-                        session = cursor.fetchone()
-                        assert session, 'Session expired. Please, sign in again'
-                        cursor.execute(sql.SQL('SELECT * FROM public."Method" WHERE "Name" = \'{}\''.format(
-                            func.__name__)))
-                        method = cursor.fetchone()
+                            'SELECT * FROM public."Role" AS R JOIN public."MethodRole" AS MR '
+                            'ON R."Id" = MR."role_id" WHERE R."Id" = \'{}\' '
+                            'AND MR."method_id" = \'{}\''.format(session['role_id'], method['Id'])))
+                        relation = cursor.fetchone()
 
-                        if method and not method['Shared']:
-                            cursor.execute(sql.SQL(
-                                'SELECT * FROM public."Role" AS R JOIN public."MethodRole" AS MR '
-                                'ON R."Id" = MR."role_id" WHERE R."Id" = \'{}\' '
-                                'AND MR."method_id" = \'{}\''.format(session['role_id'], method['Id'])))
-                            relation = cursor.fetchone()
-                            assert relation, 'Access denied'
+                        if not relation:
+                            raise web.HTTPForbidden(text='Access denied')
 
                 return func(*args, **kwargs)
-
-            except AssertionError as err:
-                return web.json_response(data={
-                    'status': 'error',
-                    'message': '{}'.format(err),
-                })
 
         return wrapper
