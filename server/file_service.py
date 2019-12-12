@@ -18,7 +18,7 @@ class FileService:
             path (str): Path to working directory with files.
 
         Raises:
-            AssertionError: if directory is not exists.
+            AssertionError: if directory does not exist.
 
         """
 
@@ -41,13 +41,13 @@ class FileService:
             size: size of file in bytes.
 
         Raises:
-            AssertionError: if file is not exists.
+            AssertionError: if file does not exist.
 
         """
 
         full_filename = "{}.{}".format(filename, extension)
         assert os.path.exists(full_filename), \
-            'File {} is not exists'.format(full_filename)
+            'File {} does not exist'.format(full_filename)
 
         with open(full_filename, 'r') as file_handler:
             return {
@@ -88,7 +88,7 @@ class FileService:
         return data
 
     @staticmethod
-    def create_file(content: str) -> typing.Dict[str, str]:
+    def create_file(content: str = None) -> typing.Dict[str, str]:
         """Create new .txt file.
 
         Method generates name of file from random string with digits and latin letters.
@@ -123,12 +123,12 @@ class FileService:
             filename (str): Filename without .txt file extension.
 
         Raises:
-            AssertionError: if file is not exists.
+            AssertionError: if file does not exist.
 
         """
 
         full_filename = "{}.{}".format(filename, extension)
         assert os.path.exists(full_filename), \
-            'File {} is not exists'.format(full_filename)
+            'File {} does not exist'.format(full_filename)
 
         os.remove(full_filename)
