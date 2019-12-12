@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from aiohttp import web
 from .database import DataBase
-from .crypto import CryptoAPI
+from .crypto import HashAPI
 
 
 EMAIL_REGEX = re.compile(r'[\w._%+-]+@[\w.-]+\.[A-Za-z]{2,}$')
@@ -57,7 +57,7 @@ class UsersAPI:
         if surname:
             surname = surname.strip()
 
-        hashed_password = CryptoAPI.hash_sha512(password)
+        hashed_password = HashAPI.hash_sha512(password)
 
         db = DataBase()
         db_session = db.create_session()
@@ -76,7 +76,7 @@ class UsersAPI:
         assert password and (password := password.strip()), 'Password is not set'
         assert EMAIL_REGEX.match(email), 'Invalid email format'
 
-        hashed_password = CryptoAPI.hash_sha512(password)
+        hashed_password = HashAPI.hash_sha512(password)
 
         db = DataBase()
         db_session = db.create_session()

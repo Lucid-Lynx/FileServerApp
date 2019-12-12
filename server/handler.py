@@ -12,8 +12,8 @@ class Handler:
 
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, path):
+        self.path = path
 
     async def handle(self, request: web.Request) -> web.Response:
         """Basic coroutine for connection testing.
@@ -47,7 +47,7 @@ class Handler:
 
         return web.json_response(data={
             'status': 'success',
-            'data': FileService.get_files(),
+            'data': FileService(self.path).get_files(),
         })
 
     @UsersAPI.authorized
@@ -70,7 +70,7 @@ class Handler:
         try:
             return web.json_response(data={
                 'status': 'success',
-                'data': FileService.get_file_data(filename),
+                'data': FileService(self.path).get_file_data(filename),
             })
 
         except AssertionError as err:
@@ -103,7 +103,7 @@ class Handler:
             data = json.loads(result)
             return web.json_response(data={
                 'status': 'success',
-                'data': FileService.create_file(data.get('content'))
+                'data': FileService(self.path).create_file(data.get('content'))
             })
 
         except ValueError as err:
@@ -127,7 +127,7 @@ class Handler:
         filename = request.match_info['filename']
 
         try:
-            FileService.delete_file(filename)
+            FileService(self.path).delete_file(filename)
             return web.json_response(data={
                 'status': 'success',
                 'message': 'File {} is successfully deleted'.format(filename),

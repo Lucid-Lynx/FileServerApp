@@ -10,6 +10,18 @@ class FileService:
 
     """
 
+    __is_inited = False
+
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, '__instance'):
+            cls.__instance = super(FileService, cls).__new__(cls)
+        return cls.__instance
+
+    def __init__(self, path):
+        if not self.__is_inited:
+            self.path = path
+            self.__is_inited = True
+
     @staticmethod
     def change_dir(path: str):
         """Change current directory of app.
@@ -25,8 +37,7 @@ class FileService:
         assert os.path.exists(path), 'Directory {} is not found'.format(path)
         os.chdir(path)
 
-    @staticmethod
-    def get_file_data(filename: str) -> typing.Dict[str, str]:
+    def get_file_data(self, filename: str) -> typing.Dict[str, str]:
         """Get full info about file.
 
         Args:
@@ -45,24 +56,21 @@ class FileService:
 
         """
 
-        full_filename = "{}.{}".format(filename, extension)
+        short_filename = '{}.{}'.format(filename, extension)
+        full_filename = '{}/{}.{}'.format(self.path, filename, extension)
         assert os.path.exists(full_filename), \
-            'File {} does not exist'.format(full_filename)
+            'File {}.{} does not exist'.format(filename, extension)
 
         with open(full_filename, 'r') as file_handler:
             return {
-                'name': full_filename,
+                'name': short_filename,
                 'content': file_handler.read(),
-                'create_date': utils.convert_date(
-                    os.path.getctime(full_filename)),
-                'edit_date': utils.convert_date(
-                    os.path.getmtime(full_filename)),
-                'size': '{} bytes'.format(
-                    os.path.getsize(full_filename), 'bytes'),
+                'create_date': utils.convert_date(os.path.getctime(full_filename)),
+                'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
+                'size': '{} bytes'.format(os.path.getsize(full_filename), 'bytes'),
             }
 
-    @staticmethod
-    def get_files() -> typing.List[typing.Dict[str, str]]:
+    def get_files(self) -> typing.List[typing.Dict[str, str]]:
         """Get info about all files in working directory.
 
         Returns:
@@ -75,20 +83,20 @@ class FileService:
         """
 
         data = []
-        files = [f for f in os.listdir(os.getcwd()) if os.path.isfile(f)]
+        files = [f for f in os.listdir(self.path) if os.path.isfile('{}/{}'.format(self.path, f))]
 
         for f in files:
+            full_filename = os.path.isfile('{}/{}'.format(self.path, f))
             data.append({
                 'name': f,
-                'create_date': utils.convert_date(os.path.getctime(f)),
-                'edit_date': utils.convert_date(os.path.getmtime(f)),
-                'size': os.path.getsize(f),
+                'create_date': utils.convert_date(os.path.getctime(full_filename)),
+                'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
+                'size': os.path.getsize(full_filename),
             })
 
         return data
 
-    @staticmethod
-    def create_file(content: str = None) -> typing.Dict[str, str]:
+    def create_file(self, content: str = None) -> typing.Dict[str, str]:
         """Create new .txt file.
 
         Method generates name of file from random string with digits and latin letters.
@@ -103,11 +111,13 @@ class FileService:
         """
 
         filename = '{}.{}'.format(utils.generate_string(), extension)
+        full_filename = '{}/{}'.format(self.path, filename)
 
-        while os.path.exists(filename):
+        while os.path.exists(full_filename):
             filename = '{}.{}'.format(utils.generate_string(), extension)
+            full_filename = '{}/{}'.format(self.path, filename)
 
-        with open(filename, 'w') as file_handler:
+        with open(full_filename, 'w') as file_handler:
             if content:
                 file_handler.write(content)
 
@@ -115,8 +125,7 @@ class FileService:
             'name': filename,
         }
 
-    @staticmethod
-    def delete_file(filename: str):
+    def delete_file(self, filename: str):
         """Delete file.
 
         Args:
@@ -127,8 +136,7 @@ class FileService:
 
         """
 
-        full_filename = "{}.{}".format(filename, extension)
-        assert os.path.exists(full_filename), \
-            'File {} does not exist'.format(full_filename)
+        full_filename = "{}/{}.{}".format(self.path, filename, extension)
+        assert os.path.exists(full_filename), 'File {}.{} does not exist'.format(filename, extension)
 
         os.remove(full_filename)
