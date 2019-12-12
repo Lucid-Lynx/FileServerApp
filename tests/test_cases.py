@@ -109,6 +109,7 @@ def teardown():
         db_session.delete(test_user)
 
     if test_role_denied:
+        db_session.query(db.MethodRole).filter_by(role_id=test_role_denied.id).delete()
         db_session.delete(test_role_denied)
 
     if test_role_allowed:
@@ -770,4 +771,397 @@ class TestSuite:
         resp = await client.delete('/role/{}'.format(test_role_name), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Role {} is not found'.format(test_role_name)
+        logging.info('Test is succeeded')
+
+    async def test_add_method_to_role(self, client, prepare_data):
+        session_denied, session_allowed, session_no_role = tuple(prepare_data)
+        test_method_name = 'test_method_1'
+        test_role_name = 'test_role_1'
+        db = DataBase()
+        db_session = db.create_session()
+        test_method = db_session.query(db.Method).filter_by(name=test_method_name).first()
+        test_role = db_session.query(db.Role).filter_by(name=test_role_name).first()
+
+        logging.info('Test request. Method not allowed')
+        resp = await client.get('/add_method_to_role', json={'method': test_method_name, 'role': test_role_name})
+        assert resp.status == 405
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.post('/add_method_to_role', json={'method': test_method_name, 'role': test_role_name})
+        assert resp.status == 401
+        assert await resp.text() == 'Unauthorized request'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Session expired')
+        resp = await client.post(
+            '/add_method_to_role',
+            json={'method': test_method_name, 'role': test_role_name},
+            headers={'Authorization': 'test'})
+        assert resp.status == 401
+        assert await resp.text() == 'Session expired. Please, sign in again'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.post(
+            '/add_method_to_role',
+            json={'method': test_method_name, 'role': test_role_name},
+            headers={'Authorization': session_denied.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User without role')
+        resp = await client.post(
+            '/add_method_to_role',
+            json={'method': test_method_name, 'role': test_role_name},
+            headers={'Authorization': session_no_role.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'User is not attached to role'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method name is not set')
+        resp = await client.post(
+            '/add_method_to_role', json={'role': test_role_name}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Method name is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Role name is not set')
+        resp = await client.post(
+            '/add_method_to_role', json={'method': test_method_name}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Role name is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method does not exist')
+        test_method_name_not_exists = 'test_method_2'
+        resp = await client.post(
+            '/add_method_to_role',
+            json={'method': test_method_name_not_exists, 'role': test_role_name},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Method {} is not found'.format(test_method_name_not_exists)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Role does not exist')
+        test_role_name_not_exists = 'test_role_4'
+        resp = await client.post(
+            '/add_method_to_role',
+            json={'method': test_method_name, 'role': test_role_name_not_exists},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Role {} is not found'.format(test_role_name_not_exists)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method is already added to role')
+        test_role_name_with_method = 'test_role_2'
+        resp = await client.post(
+            '/add_method_to_role',
+            json={'method': test_method_name, 'role': test_role_name_with_method},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Method {} already exists in role {}'.format(
+            test_method_name, test_role_name_with_method)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method is not added to role')
+        resp = await client.post(
+            '/add_method_to_role',
+            json={'method': test_method_name, 'role': test_role_name},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'You successfully added method {} to role {}'.format(
+            test_method_name, test_role_name)
+        assert db_session.query(db.MethodRole).filter_by(method_id=test_method.id, role_id=test_role.id).first()
+        logging.info('Test is succeeded')
+
+    async def test_delete_method_from_role(self, client, prepare_data):
+        session_denied, session_allowed, session_no_role = tuple(prepare_data)
+        test_method_name = 'test_method_1'
+        test_role_name = 'test_role_2'
+        db = DataBase()
+        db_session = db.create_session()
+        test_method = db_session.query(db.Method).filter_by(name=test_method_name).first()
+        test_role = db_session.query(db.Role).filter_by(name=test_role_name).first()
+
+        logging.info('Test request. Method not allowed')
+        resp = await client.get('/delete_method_from_role', json={'method': test_method_name, 'role': test_role_name})
+        assert resp.status == 405
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.post('/delete_method_from_role', json={'method': test_method_name, 'role': test_role_name})
+        assert resp.status == 401
+        assert await resp.text() == 'Unauthorized request'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Session expired')
+        resp = await client.post(
+            '/delete_method_from_role',
+            json={'method': test_method_name, 'role': test_role_name},
+            headers={'Authorization': 'test'})
+        assert resp.status == 401
+        assert await resp.text() == 'Session expired. Please, sign in again'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.post(
+            '/delete_method_from_role',
+            json={'method': test_method_name, 'role': test_role_name},
+            headers={'Authorization': session_denied.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User without role')
+        resp = await client.post(
+            '/delete_method_from_role',
+            json={'method': test_method_name, 'role': test_role_name},
+            headers={'Authorization': session_no_role.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'User is not attached to role'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method name is not set')
+        resp = await client.post(
+            '/delete_method_from_role', json={'role': test_role_name}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Method name is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Role name is not set')
+        resp = await client.post(
+            '/delete_method_from_role',
+            json={'method': test_method_name},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Role name is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method does not exist')
+        test_method_name_not_exists = 'test_method_2'
+        resp = await client.post(
+            '/delete_method_from_role',
+            json={'method': test_method_name_not_exists, 'role': test_role_name},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Method {} is not found'.format(test_method_name_not_exists)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Role does not exist')
+        test_role_name_not_exists = 'test_role_4'
+        resp = await client.post(
+            '/delete_method_from_role',
+            json={'method': test_method_name, 'role': test_role_name_not_exists},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Role {} is not found'.format(test_role_name_not_exists)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method is not found in role')
+        test_role_name_without_method = 'test_role_1'
+        resp = await client.post(
+            '/delete_method_from_role',
+            json={'method': test_method_name, 'role': test_role_name_without_method},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Method {} is not found in role {}'.format(
+            test_method_name, test_role_name_without_method)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method is added to role')
+        resp = await client.post(
+            '/delete_method_from_role',
+            json={'method': test_method_name, 'role': test_role_name},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'You successfully deleted method {} from role {}'.format(
+            test_method_name, test_role_name)
+        assert not db_session.query(db.MethodRole).filter_by(method_id=test_method.id, role_id=test_role.id).first()
+        logging.info('Test is succeeded')
+
+    async def test_change_shared_prop(self, client, prepare_data):
+        session_denied, session_allowed, session_no_role = tuple(prepare_data)
+        test_method_name = 'test_method_1'
+        db = DataBase()
+        db_session = db.create_session()
+
+        logging.info('Test request. Method not allowed')
+        resp = await client.get('/change_shared_prop', json={'method': test_method_name, 'value': True})
+        assert resp.status == 405
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.post('/change_shared_prop', json={'method': test_method_name, 'value': True})
+        assert resp.status == 401
+        assert await resp.text() == 'Unauthorized request'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Session expired')
+        resp = await client.post(
+            '/change_shared_prop', json={'method': test_method_name, 'value': True}, headers={'Authorization': 'test'})
+        assert resp.status == 401
+        assert await resp.text() == 'Session expired. Please, sign in again'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.post(
+            '/change_shared_prop',
+            json={'method': test_method_name, 'value': True},
+            headers={'Authorization': session_denied.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User without role')
+        resp = await client.post(
+            '/change_shared_prop',
+            json={'method': test_method_name, 'value': True},
+            headers={'Authorization': session_no_role.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'User is not attached to role'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method name is not set')
+        resp = await client.post(
+            '/change_shared_prop', json={'value': True}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Method name is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Value is not set')
+        resp = await client.post(
+            '/change_shared_prop', json={'method': test_method_name}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Value is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Value is not boolean')
+        resp = await client.post(
+            '/change_shared_prop',
+            json={'method': test_method_name, 'value': 'test'},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Value should be boolean'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method does not exist')
+        test_method_name_not_exists = 'test_method_2'
+        resp = await client.post(
+            '/change_shared_prop',
+            json={'method': test_method_name_not_exists, 'value': True},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Method {} is not found'.format(test_method_name_not_exists)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Method exists')
+        resp = await client.post(
+            '/change_shared_prop',
+            json={'method': test_method_name, 'value': True},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == \
+            'You successfully changed shared property of method {}. Property is enabled'.format(test_method_name)
+        test_method = db_session.query(db.Method).filter_by(name=test_method_name).first()
+        assert test_method.shared
+        logging.info('Test is succeeded')
+
+    async def test_change_user_role(self, client, prepare_data):
+        session_denied, session_allowed, session_no_role = tuple(prepare_data)
+        test_email = 'user1@test.su'
+        test_role_name = 'test_role_2'
+        db = DataBase()
+        db_session = db.create_session()
+
+        logging.info('Test request. Method not allowed')
+        resp = await client.get('/change_user_role', json={'email': test_email, 'role': test_role_name})
+        assert resp.status == 405
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.post('/change_user_role', json={'email': test_email, 'role': test_role_name})
+        assert resp.status == 401
+        assert await resp.text() == 'Unauthorized request'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Session expired')
+        resp = await client.post(
+            '/change_user_role', json={'email': test_email, 'role': test_role_name}, headers={'Authorization': 'test'})
+        assert resp.status == 401
+        assert await resp.text() == 'Session expired. Please, sign in again'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.post(
+            '/change_user_role',
+            json={'email': test_email, 'role': test_role_name},
+            headers={'Authorization': session_denied.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User without role')
+        resp = await client.post(
+            '/change_user_role',
+            json={'email': test_email, 'role': test_role_name},
+            headers={'Authorization': session_no_role.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'User is not attached to role'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Email is not set')
+        resp = await client.post(
+            '/change_user_role', json={'role': test_role_name}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Email is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Role name is not set')
+        resp = await client.post(
+            '/change_user_role', json={'email': test_email}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Role name is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. User does not exist')
+        test_email_not_exists = 'user4@test.su'
+        resp = await client.post(
+            '/change_user_role',
+            json={'email': test_email_not_exists, 'role': test_role_name},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'User with email {} is not found'.format(test_email_not_exists)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Role does not exist')
+        test_role_name_not_exists = 'test_role_4'
+        resp = await client.post(
+            '/change_user_role',
+            json={'email': test_email, 'role': test_role_name_not_exists},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Role {} is not found'.format(test_role_name_not_exists)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. User and role exist')
+        resp = await client.post(
+            '/change_user_role',
+            json={'email': test_email, 'role': test_role_name},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == \
+            'You successfully changed role of user with email {}. New role is {}'.format(test_email, test_role_name)
+        test_user = db_session.query(db.User).filter_by(email=test_email).first()
+        test_role = db_session.query(db.Role).filter_by(name=test_role_name).first()
+        assert test_user.role_id == test_role.id
         logging.info('Test is succeeded')
