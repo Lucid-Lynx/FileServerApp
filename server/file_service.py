@@ -86,7 +86,7 @@ class FileService:
         files = [f for f in os.listdir(self.path) if os.path.isfile('{}/{}'.format(self.path, f))]
 
         for f in files:
-            full_filename = os.path.isfile('{}/{}'.format(self.path, f))
+            full_filename = '{}/{}'.format(self.path, f)
             data.append({
                 'name': f,
                 'create_date': utils.convert_date(os.path.getctime(full_filename)),
