@@ -26,10 +26,9 @@ class Handler:
 
         """
 
-        data = {
+        return web.json_response(data={
             'status': 'success'
-        }
-        return web.json_response(data)
+        })
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -75,10 +74,7 @@ class Handler:
             })
 
         except AssertionError as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -111,10 +107,7 @@ class Handler:
             })
 
         except ValueError as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -141,10 +134,7 @@ class Handler:
             })
 
         except AssertionError as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     async def signup(self, request: web.Request) -> web.Response:
         """Coroutine for signing up user.
@@ -181,10 +171,7 @@ class Handler:
             })
 
         except (AssertionError, ValueError) as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     async def signin(self, request: web.Request) -> web.Response:
         """Coroutine for signing in user.
@@ -218,10 +205,7 @@ class Handler:
             })
 
         except (AssertionError, ValueError) as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     async def logout(self, request: web.Request) -> web.Response:
         """Coroutine for logout.
@@ -237,7 +221,7 @@ class Handler:
         session_id = request.headers.get('Authorization')
 
         if not session_id:
-            raise web.HTTPForbidden()
+            raise web.HTTPUnauthorized(text='Unauthorized request')
 
         UsersAPI.logout(session_id)
         # UsersSQLAPI.logout(session_id)
@@ -272,10 +256,7 @@ class Handler:
             })
 
         except AssertionError as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -302,10 +283,7 @@ class Handler:
             })
 
         except AssertionError as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -332,10 +310,7 @@ class Handler:
             })
 
         except AssertionError as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -362,10 +337,7 @@ class Handler:
             })
 
         except AssertionError as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -402,10 +374,7 @@ class Handler:
             })
 
         except (AssertionError, ValueError) as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -443,10 +412,7 @@ class Handler:
             })
 
         except (AssertionError, ValueError) as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -484,10 +450,7 @@ class Handler:
             })
 
         except (AssertionError, ValueError) as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -525,7 +488,4 @@ class Handler:
             })
 
         except (AssertionError, ValueError) as err:
-            return web.json_response(data={
-                'status': 'error',
-                'message': '{}'.format(err),
-            })
+            raise web.HTTPBadRequest(text='{}'.format(err))

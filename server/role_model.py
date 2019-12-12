@@ -12,27 +12,27 @@ class RoleModel:
             session_id = request.headers.get('Authorization')
 
             if not session_id:
-                raise web.HTTPForbidden()
+                raise web.HTTPUnauthorized(text='Unauthorized request')
 
-            try:
-                db = DataBase()
-                db_session = db.create_session()
-                session = db_session.query(db.Session).filter_by(uuid=session_id).first()
-                assert session, 'Session expired. Please, sign in again'
-                assert session.user.role, 'User is not attached to role'
-                method = db_session.query(db.Method).filter_by(name=func.__name__).first()
+            db = DataBase()
+            db_session = db.create_session()
+            session = db_session.query(db.Session).filter_by(uuid=session_id).first()
 
-                if method and not method.shared:
-                    relations = set(filter(lambda rel: rel.role_id == session.user.role.id, method.roles))
-                    assert len(relations) > 0, 'Access denied'
+            if not session:
+                raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
 
-                return func(*args, **kwargs)
+            if not session.user.role:
+                raise web.HTTPForbidden(text='User is not attached to role')
 
-            except AssertionError as err:
-                return web.json_response(data={
-                    'status': 'error',
-                    'message': '{}'.format(err),
-                })
+            method = db_session.query(db.Method).filter_by(name=func.__name__).first()
+
+            if method and not method.shared:
+                relations = set(filter(lambda rel: rel.role_id == session.user.role.id, method.roles))
+
+                if len(relations) == 0:
+                    raise web.HTTPForbidden(text='Access denied')
+
+            return func(*args, **kwargs)
 
         return wrapper
 
@@ -41,7 +41,7 @@ class RoleModel:
         db = DataBase()
         db_session = db.create_session()
         existing_method = db_session.query(db.Method).filter_by(name=method_name).first()
-        assert not existing_method, 'Method {} is already exists'.format(method_name)
+        assert not existing_method, 'Method {} already exists'.format(method_name)
         db_session.add(db.Method(method_name))
         db_session.commit()
 
@@ -51,6 +51,7 @@ class RoleModel:
         db_session = db.create_session()
         method = db_session.query(db.Method).filter_by(name=method_name).first()
         assert method, 'Method {} is not found'.format(method_name)
+        db_session.query(db.MethodRole).filter_by(method_id=method.id).delete()
         db_session.delete(method)
         db_session.commit()
 
@@ -59,7 +60,7 @@ class RoleModel:
         db = DataBase()
         db_session = db.create_session()
         existing_role = db_session.query(db.Role).filter_by(name=role_name).first()
-        assert not existing_role, 'Role {} is already exists'.format(role_name)
+        assert not existing_role, 'Role {} already exists'.format(role_name)
         db_session.add(db.Role(role_name))
         db_session.commit()
 
@@ -70,6 +71,7 @@ class RoleModel:
         role = db_session.query(db.Role).filter_by(name=role_name).first()
         assert role, 'Role {} is not found'.format(role_name)
         assert not len(role.users), "You can't delete role with users"
+        db_session.query(db.MethodRole).filter_by(role_id=role.id).delete()
         db_session.delete(role)
         db_session.commit()
 
