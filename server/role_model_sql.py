@@ -29,7 +29,7 @@ class RoleModelSQL:
                 with conn.cursor(cursor_factory=DictCursor) as cursor:
                     cursor.execute(sql.SQL(
                         'SELECT * FROM public."Session" AS S JOIN public."User" AS U '
-                        'ON S."user_id" = U."Id" WHERE "UUID" = \'{}\''.format(session_id)))
+                        'ON S."user_id" = U."Id" WHERE "UUID" = {}').format(sql.Literal(session_id)))
                     session = cursor.fetchone()
 
                     if not session:
@@ -38,15 +38,15 @@ class RoleModelSQL:
                     if not session.get('role_id'):
                         raise web.HTTPForbidden(text='User is not attached to role')
 
-                    cursor.execute(sql.SQL('SELECT * FROM public."Method" WHERE "Name" = \'{}\''.format(
-                        func.__name__)))
+                    cursor.execute(sql.SQL('SELECT * FROM public."Method" WHERE "Name" = {}').format(
+                        sql.Literal(func.__name__)))
                     method = cursor.fetchone()
 
                     if method and not method['Shared']:
                         cursor.execute(sql.SQL(
                             'SELECT * FROM public."Role" AS R JOIN public."MethodRole" AS MR '
-                            'ON R."Id" = MR."role_id" WHERE R."Id" = \'{}\' '
-                            'AND MR."method_id" = \'{}\''.format(session['role_id'], method['Id'])))
+                            'ON R."Id" = MR."role_id" WHERE R."Id" = {} AND MR."method_id" = {}').format(
+                                sql.Literal(session['role_id']), sql.Literal(method['Id'])))
                         relation = cursor.fetchone()
 
                         if not relation:
