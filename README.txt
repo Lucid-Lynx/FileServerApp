@@ -2,7 +2,7 @@ Description
 ===========
 
 File server project.
-Version: 1.8
+Version: 1.9
 
 Installing package:
 python setup.py install
