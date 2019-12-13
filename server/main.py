@@ -2,9 +2,8 @@ import argparse
 import os
 import sys
 from aiohttp import web
-from .handler import Handler
-from .file_service import FileService
-from .database import DataBase
+from server.handler import Handler
+from server.database import DataBase
 
 
 def commandline_parser() -> argparse.ArgumentParser:
@@ -38,13 +37,12 @@ def main():
 
     parser = commandline_parser()
     namespace = parser.parse_args(sys.argv[1:])
-    FileService.change_dir(namespace.folder)
 
     db = DataBase()
     if namespace.init:
         db.init_system()
 
-    handler = Handler()
+    handler = Handler(namespace.folder)
     app = web.Application()
     app.add_routes([
         web.get('/', handler.handle),

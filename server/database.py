@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime, timedelta
 from uuid import uuid4
-from .crypto import CryptoAPI
+from server.crypto import HashAPI
 
 
 class DataBase:
@@ -136,7 +136,7 @@ class DataBase:
         role_trusted = self.Role('trusted')
         role_admin = self.Role(
             'admin',
-            users=[self.User('admin@fileserver.su', CryptoAPI.hash_sha512(os.environ['ADMIN_PASSWORD']), 'Admin')])
+            users=[self.User('admin@fileserver.su', HashAPI.hash_sha512(os.environ['ADMIN_PASSWORD']), 'Admin')])
         session.add_all([
             self.Method('get_files', roles=[role_visitor, role_trusted, role_admin]),
             self.Method('get_file_info', roles=[role_visitor, role_trusted, role_admin]),

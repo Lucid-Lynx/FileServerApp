@@ -1,5 +1,5 @@
 from aiohttp import web
-from .database import DataBase
+from server.database import DataBase
 
 
 class RoleModel:
