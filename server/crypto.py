@@ -28,7 +28,7 @@ class BaseCipher:
         pass
 
     def decrypt(self, input_file):
-        pass
+        return input_file.read()
 
     def write_cipher_text(self, data, out_file):
         out_file.write(data)
@@ -36,10 +36,10 @@ class BaseCipher:
 
 class AESCipher(BaseCipher):
 
-    def __init__(self, username):
+    def __init__(self, user_id):
         super().__init__()
-        self.username = username
-        self.session_key_file = '{}/{}_session_aes_key.bin'.format(key_folder, self.username)
+        self.user_id = user_id
+        self.session_key_file = '{}/{}_session_aes_key.bin'.format(key_folder, self.user_id)
 
     def encrypt(self, data):
         session_key = get_random_bytes(16)
@@ -50,7 +50,7 @@ class AESCipher(BaseCipher):
 
     def decrypt(self, input_file):
         nonce, tag, cipher_text = [input_file.read(x) for x in (16, 16, -1)]
-        session_key = open(self.session_key_file).read()
+        session_key = open(self.session_key_file, 'rb').read()
 
         return self.decrypt_aes_data(cipher_text, tag, nonce, session_key)
 
@@ -62,7 +62,7 @@ class AESCipher(BaseCipher):
         return data
 
     def write_cipher_text(self, data, out_file):
-        cipher_text, tag, nonce, session_key = self.encrypt(data, out_file)
+        cipher_text, tag, nonce, session_key = self.encrypt(data)
 
         if not os.path.exists(self.session_key_file):
             with open(self.session_key_file, 'wb') as f:
@@ -77,13 +77,13 @@ class RSACipher(AESCipher):
     code = os.environ['CRYPTO_CODE']
     key_protection = 'scryptAndAES128-CBC'
 
-    def __init__(self, username):
-        super().__init__(username)
+    def __init__(self, user_id):
+        super().__init__(user_id)
         key = RSA.generate(2048)
         encrypted_key = key.export_key(passphrase=self.code, pkcs=8, protection=self.key_protection)
 
-        self.private_key_file = '{}/{}_private_rsa_key.bin'.format(key_folder, self.username)
-        self.public_key_file = '{}/{}_rsa_public.pem'.format(key_folder, self.username)
+        self.private_key_file = '{}/{}_private_rsa_key.bin'.format(key_folder, self.user_id)
+        self.public_key_file = '{}/{}_public_rsa_key.pem'.format(key_folder, self.user_id)
 
         if not os.path.exists(self.private_key_file):
             with open(self.private_key_file, 'wb') as f:

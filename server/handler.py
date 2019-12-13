@@ -1,10 +1,10 @@
 import json
 from aiohttp import web
-from .file_service import FileService
-from .users import UsersAPI
-from .role_model import RoleModel
-from .users_sql import UsersSQLAPI
-from .role_model_sql import RoleModelSQL
+from server.file_service import FileService
+from server.users import UsersAPI
+from server.role_model import RoleModel
+from server.users_sql import UsersSQLAPI
+from server.role_model_sql import RoleModelSQL
 
 
 class Handler:
@@ -15,7 +15,7 @@ class Handler:
     def __init__(self, path):
         self.path = path
 
-    async def handle(self, request: web.Request) -> web.Response:
+    async def handle(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Basic coroutine for connection testing.
 
         Args:
@@ -34,7 +34,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def get_files(self, request: web.Request) -> web.Response:
+    async def get_files(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for getting info about all files in working directory.
 
         Args:
@@ -54,11 +54,12 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def get_file_info(self, request: web.Request) -> web.Response:
+    async def get_file_info(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for getting full info about file in working directory.
 
         Args:
-            request (Request): aiohttp request, contains filename.
+            request (Request): aiohttp request, contains filename,
+            user_id: "user id". Optional.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.
@@ -70,7 +71,7 @@ class Handler:
         try:
             return web.json_response(data={
                 'status': 'success',
-                'data': FileService(self.path).get_file_data(filename),
+                'data': FileService(self.path).get_file_data(filename, kwargs.get('user_id')),
             })
 
         except AssertionError as err:
@@ -80,12 +81,15 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def create_file(self, request: web.Request) -> web.Response:
+    async def create_file(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for creating file.
 
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
-            {"content": "content string. Optional"}.
+            {
+                "content": "content string. Optional",
+                "security_level": "security level. Optional. Default: low"
+            }.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.
@@ -103,7 +107,8 @@ class Handler:
             data = json.loads(result)
             return web.json_response(data={
                 'status': 'success',
-                'data': FileService(self.path).create_file(data.get('content'))
+                'data': FileService(
+                    self.path).create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
             })
 
         except ValueError as err:
@@ -113,7 +118,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def delete_file(self, request: web.Request) -> web.Response:
+    async def delete_file(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for deleting file.
 
         Args:
@@ -127,16 +132,15 @@ class Handler:
         filename = request.match_info['filename']
 
         try:
-            FileService(self.path).delete_file(filename)
             return web.json_response(data={
                 'status': 'success',
-                'message': 'File {} is successfully deleted'.format(filename),
+                'message': 'File {} is successfully deleted'.format(FileService(self.path).delete_file(filename)),
             })
 
         except AssertionError as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
-    async def signup(self, request: web.Request) -> web.Response:
+    async def signup(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing up user.
 
         Args:
@@ -173,7 +177,7 @@ class Handler:
         except (AssertionError, ValueError) as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
-    async def signin(self, request: web.Request) -> web.Response:
+    async def signin(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing in user.
 
         Args:
@@ -207,7 +211,7 @@ class Handler:
         except (AssertionError, ValueError) as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
-    async def logout(self, request: web.Request) -> web.Response:
+    async def logout(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for logout.
 
         Args:
@@ -235,7 +239,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def add_method(self, request: web.Request) -> web.Response:
+    async def add_method(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for adding method into role model.
 
         Args:
@@ -262,7 +266,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def delete_method(self, request: web.Request) -> web.Response:
+    async def delete_method(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for deleting method from role model.
 
         Args:
@@ -289,7 +293,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def add_role(self, request: web.Request) -> web.Response:
+    async def add_role(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for adding role into role method.
 
         Args:
@@ -316,7 +320,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def delete_role(self, request: web.Request) -> web.Response:
+    async def delete_role(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for deleting role from role method.
 
         Args:
@@ -343,7 +347,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def add_method_to_role(self, request: web.Request) -> web.Response:
+    async def add_method_to_role(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for adding method to role.
 
         Args:
@@ -380,7 +384,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def delete_method_from_role(self, request: web.Request) -> web.Response:
+    async def delete_method_from_role(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for deleting method from role.
 
         Args:
@@ -418,7 +422,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def change_shared_prop(self, request: web.Request) -> web.Response:
+    async def change_shared_prop(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for changing shared property of method.
 
         Args:
@@ -456,7 +460,7 @@ class Handler:
     @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
-    async def change_user_role(self, request: web.Request) -> web.Response:
+    async def change_user_role(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for setting new role to user .
 
         Args:

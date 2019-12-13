@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime, timedelta
 from uuid import uuid4
-from .crypto import HashAPI
+from server.crypto import HashAPI
 
 
 class DataBase:

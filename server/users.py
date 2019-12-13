@@ -1,8 +1,8 @@
 import re
 from datetime import datetime
 from aiohttp import web
-from .database import DataBase
-from .crypto import HashAPI
+from server.database import DataBase
+from server.crypto import HashAPI
 
 
 EMAIL_REGEX = re.compile(r'[\w._%+-]+@[\w.-]+\.[A-Za-z]{2,}$')
@@ -32,6 +32,8 @@ class UsersAPI:
                 db_session.delete(session)
                 db_session.commit()
                 raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
+
+            kwargs.update(user_id=session.user_id)
 
             return func(*args, **kwargs)
 

@@ -7,7 +7,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from aiohttp import web
 from uuid import uuid4
-from .crypto import HashAPI
+from server.crypto import HashAPI
 
 EMAIL_REGEX = re.compile(r'[\w._%+-]+@[\w.-]+\.[A-Za-z]{2,}$')
 PASSWORD_REGEX = re.compile(r'^\w{8,50}$')
@@ -47,6 +47,8 @@ class UsersSQLAPI:
                             sql.SQL('DELETE FROM public."Session" WHERE "Id" = {}').format(sql.Literal(session['Id'])))
                         conn.commit()
                         raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
+
+                    kwargs.update(user_id=session['user_id'])
 
             return func(*args, **kwargs)
 

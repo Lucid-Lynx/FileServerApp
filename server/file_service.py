@@ -1,6 +1,7 @@
 import os
 import server.utils as utils
 import typing
+from server.crypto import BaseCipher, AESCipher, RSACipher
 
 extension = 'txt'
 
@@ -37,11 +38,12 @@ class FileService:
         assert os.path.exists(path), 'Directory {} is not found'.format(path)
         os.chdir(path)
 
-    def get_file_data(self, filename: str) -> typing.Dict[str, str]:
+    def get_file_data(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
         """Get full info about file.
 
         Args:
-            filename (str): Filename without .txt file extension.
+            filename (str): Filename without .txt file extension,
+            user_id (int): User Id.
 
         Returns:
             Dict (key (str): value (str)), which contains full info about file. Keys:
@@ -61,10 +63,23 @@ class FileService:
         assert os.path.exists(full_filename), \
             'File {}.{} does not exist'.format(filename, extension)
 
-        with open(full_filename, 'r') as file_handler:
+        filename_parts = filename.split('_')
+        assert len(filename_parts) == 2, 'Invalid format of file name'
+        security_level = filename_parts[1]
+
+        if not security_level or security_level == 'low':
+            cipher = BaseCipher()
+        elif security_level == 'medium':
+            cipher = AESCipher(user_id)
+        elif security_level == 'high':
+            cipher = RSACipher(user_id)
+        else:
+            raise ValueError('Security level is no valid')
+
+        with open(full_filename, 'rb') as file_handler:
             return {
                 'name': short_filename,
-                'content': file_handler.read(),
+                'content': cipher.decrypt(file_handler).decode('utf-8'),
                 'create_date': utils.convert_date(os.path.getctime(full_filename)),
                 'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
                 'size': '{} bytes'.format(os.path.getsize(full_filename), 'bytes'),
@@ -96,13 +111,16 @@ class FileService:
 
         return data
 
-    def create_file(self, content: str = None) -> typing.Dict[str, str]:
+    def create_file(
+            self, content: str = None, security_level: str = None, user_id: int = None) -> typing.Dict[str, str]:
         """Create new .txt file.
 
         Method generates name of file from random string with digits and latin letters.
 
         Args:
-            content (str): String with file content.
+            content (str): String with file content,
+            security_level (str): String with security level,
+            user_id (int): User Id.
 
         Returns:
             Dict (key (str): value (str)), which contains name of created file. Keys:
@@ -110,16 +128,29 @@ class FileService:
 
         """
 
-        filename = '{}.{}'.format(utils.generate_string(), extension)
+        assert user_id, 'User Id is not set'
+
+        filename = '{}_{}.{}'.format(utils.generate_string(), security_level, extension)
         full_filename = '{}/{}'.format(self.path, filename)
 
         while os.path.exists(full_filename):
-            filename = '{}.{}'.format(utils.generate_string(), extension)
+            filename = '{}_{}.{}'.format(utils.generate_string(), security_level, extension)
             full_filename = '{}/{}'.format(self.path, filename)
 
-        with open(full_filename, 'w') as file_handler:
+        if not security_level or security_level == 'low':
+            cipher = BaseCipher()
+        elif security_level == 'medium':
+            cipher = AESCipher(user_id)
+        elif security_level == 'high':
+            cipher = RSACipher(user_id)
+        else:
+            raise ValueError('Security level is no valid')
+
+        with open(full_filename, 'wb') as file_handler:
             if content:
-                file_handler.write(content)
+                # file_handler.write(content)
+                data = bytes(content, 'utf-8')
+                cipher.write_cipher_text(data, file_handler)
 
         return {
             'name': filename,
@@ -136,7 +167,10 @@ class FileService:
 
         """
 
-        full_filename = "{}/{}.{}".format(self.path, filename, extension)
-        assert os.path.exists(full_filename), 'File {}.{} does not exist'.format(filename, extension)
+        filename = '{}.{}'.format(filename, extension)
+        full_filename = "{}/{}".format(self.path, filename)
+        assert os.path.exists(full_filename), 'File {} does not exist'.format(filename)
 
         os.remove(full_filename)
+
+        return filename
