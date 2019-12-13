@@ -74,7 +74,7 @@ class FileService:
         elif security_level == 'high':
             cipher = RSACipher(user_id)
         else:
-            raise ValueError('Security level is no valid')
+            raise ValueError('Security level is invalid')
 
         with open(full_filename, 'rb') as file_handler:
             return {
@@ -144,11 +144,10 @@ class FileService:
         elif security_level == 'high':
             cipher = RSACipher(user_id)
         else:
-            raise ValueError('Security level is no valid')
+            raise ValueError('Security level is invalid')
 
         with open(full_filename, 'wb') as file_handler:
             if content:
-                # file_handler.write(content)
                 data = bytes(content, 'utf-8')
                 cipher.write_cipher_text(data, file_handler)
 
