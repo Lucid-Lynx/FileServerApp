@@ -74,7 +74,7 @@ class Handler:
                 'data': FileService(self.path).get_file_data(filename, kwargs.get('user_id')),
             })
 
-        except AssertionError as err:
+        except (AssertionError, ValueError) as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
