@@ -5,12 +5,13 @@ import logging
 from aiohttp import web
 from server.handler import Handler
 from server.database import DataBase
+from server.file_service import FileService
 from server.crypto import HashAPI
 
 logger = logging.getLogger("Test Logger")
 
 extension = 'txt'
-test_folder = '../test_files'
+test_folder = '../test_files_1'
 test_file_1 = 'test1_low.txt'
 test_file_2 = 'test2_test.txt'
 test_file_3 = 'test3.txt'
@@ -63,8 +64,9 @@ def client(loop, aiohttp_client):
     app.router.add_post('/delete_method_from_role', handler.delete_method_from_role)
     app.router.add_post('/change_shared_prop', handler.change_shared_prop)
     app.router.add_post('/change_user_role', handler.change_user_role)
+    app.router.add_post('/change_file_dir', handler.change_file_dir)
 
-    return loop.run_until_complete(aiohttp_client(app))
+    return loop.run_until_complete(aiohttp_client(app)), handler
 
 
 @pytest.fixture(scope='function')
@@ -75,7 +77,7 @@ def prepare_data(request):
     testing_methods = db_session.query(db.Method).filter(db.Method.name.in_([
         'get_files', 'get_file_info', 'create_file', 'delete_file', 'add_method', 'delete_method', 'add_role',
         'delete_role', 'add_method_to_role', 'delete_method_from_role', 'change_shared_prop', 'change_user_role',
-    ])).all()
+        'change_file_dir'])).all()
     test_method = db.Method('test_method_1')
     testing_methods.append(test_method)
     test_role_denied = db.Role('test_role_1')
@@ -142,6 +144,8 @@ def teardown():
 class TestSuite:
 
     async def test_connection(self, client):
+        client, handler = tuple(client)
+
         logging.info('Test request. Method not allowed')
         resp = await client.put('/')
         assert resp.status == 405
@@ -155,6 +159,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_get_files(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
 
         logging.info('Test request. Method not allowed')
@@ -203,6 +208,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_get_file_info(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_file_part = test_file_1.split('.')[0]
 
@@ -270,6 +276,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_create_file(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
 
         logging.info('Test request. Method not allowed')
@@ -352,6 +359,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_delete_file(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_file_part = test_file_2.split('.')[0]
 
@@ -401,6 +409,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_signup(self, client, prepare_data):
+        client, handler = tuple(client)
         test_email = 'user4@test.su'
         db = DataBase()
         db_session = db.create_session()
@@ -451,10 +460,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
         logging.info('Test request. Password is not set')
-        resp = await client.post('/signup', json={
-            'email': test_email,
-            'name': 'User4',
-        })
+        resp = await client.post('/signup', json={'email': test_email, 'name': 'User4'})
         assert resp.status == 400
         assert await resp.text() == 'Password is not set'
         logging.info('Test is succeeded')
@@ -515,24 +521,19 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_signin(self, client, prepare_data):
+        client, handler = tuple(client)
         test_email = 'user1@test.su'
         db = DataBase()
         db_session = db.create_session()
         test_user = db_session.query(db.User).filter_by(email=test_email).first()
 
         logging.info('Test request. Method not allowed')
-        resp = await client.put('/signin', json={
-            'email': test_email,
-            'password': '1test1234',
-        })
+        resp = await client.put('/signin', json={'email': test_email, 'password': '1test1234'})
         assert resp.status == 405
         logging.info('Test is succeeded')
 
         logging.info('Test request. User exists')
-        resp = await client.post('/signin', json={
-            'email': test_email,
-            'password': '1test1234',
-        })
+        resp = await client.post('/signin', json={'email': test_email, 'password': '1test1234'})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
@@ -542,49 +543,37 @@ class TestSuite:
         logging.info('Test is succeeded')
 
         logging.info('Test request. Email is not set')
-        resp = await client.post('/signin', json={
-            'password': '1test1234',
-        })
+        resp = await client.post('/signin', json={'password': '1test1234'})
         assert resp.status == 400
         assert await resp.text() == 'Email is not set'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Invalid email format')
-        resp = await client.post('/signin', json={
-            'email': 'user1',
-            'password': '1test1234',
-        })
+        resp = await client.post('/signin', json={'email': 'user1', 'password': '1test1234'})
         assert resp.status == 400
         assert await resp.text() == 'Invalid email format'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Password is not set')
-        resp = await client.post('/signin', json={
-            'email': test_email,
-        })
+        resp = await client.post('/signin', json={'email': test_email})
         assert resp.status == 400
         assert await resp.text() == 'Password is not set'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Invalid password')
-        resp = await client.post('/signin', json={
-            'email': test_email,
-            'password': 'test',
-        })
+        resp = await client.post('/signin', json={'email': test_email, 'password': 'test'})
         assert resp.status == 400
         assert await resp.text() == 'Invalid login or password'
         logging.info('Test is succeeded')
 
         logging.info('Test request. User does not exist')
-        resp = await client.post('/signin', json={
-            'email': 'user4@test.su',
-            'password': 'test',
-        })
+        resp = await client.post('/signin', json={'email': 'user4@test.su', 'password': 'test'})
         assert resp.status == 400
         assert await resp.text() == 'Invalid login or password'
         logging.info('Test is succeeded')
 
     async def test_logout(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         db = DataBase()
         db_session = db.create_session()
@@ -610,6 +599,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_add_method(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_method_name = 'test_method_2'
         db = DataBase()
@@ -662,6 +652,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_delete_method(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_method_name = 'test_method_1'
         db = DataBase()
@@ -716,6 +707,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_add_role(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_role_name = 'test_role_4'
         db = DataBase()
@@ -768,6 +760,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_delete_role(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_role_name = 'test_role_3'
         db = DataBase()
@@ -824,6 +817,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_add_method_to_role(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_method_name = 'test_method_1'
         test_role_name = 'test_role_1'
@@ -929,6 +923,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_delete_method_from_role(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_method_name = 'test_method_1'
         test_role_name = 'test_role_2'
@@ -1036,6 +1031,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_change_shared_prop(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_method_name = 'test_method_1'
         db = DataBase()
@@ -1125,6 +1121,7 @@ class TestSuite:
         logging.info('Test is succeeded')
 
     async def test_change_user_role(self, client, prepare_data):
+        client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_email = 'user1@test.su'
         test_role_name = 'test_role_2'
@@ -1214,4 +1211,57 @@ class TestSuite:
         test_user = db_session.query(db.User).filter_by(email=test_email).first()
         test_role = db_session.query(db.Role).filter_by(name=test_role_name).first()
         assert test_user.role_id == test_role.id
+        logging.info('Test is succeeded')
+
+    async def test_change_file_dir(self, client, prepare_data):
+        client, handler = tuple(client)
+        session_denied, session_allowed, session_no_role = tuple(prepare_data)
+        new_test_folder = '../test_folder_2'
+
+        logging.info('Test request. Method not allowed')
+        resp = await client.get('/change_file_dir', json={'path': new_test_folder})
+        assert resp.status == 405
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.post('/change_file_dir', json={'path': new_test_folder})
+        assert resp.status == 401
+        assert await resp.text() == 'Unauthorized request'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Session expired')
+        resp = await client.post('/change_file_dir', json={'path': new_test_folder}, headers={'Authorization': 'test'})
+        assert resp.status == 401
+        assert await resp.text() == 'Session expired. Please, sign in again'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.post(
+            '/change_file_dir', json={'path': new_test_folder}, headers={'Authorization': session_denied.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User without role')
+        resp = await client.post(
+            '/change_file_dir', json={'path': new_test_folder}, headers={'Authorization': session_no_role.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'User is not attached to role'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Directory path is not set')
+        resp = await client.post('/change_file_dir', json={}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Directory path is not set'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Directory path is set')
+        resp = await client.post(
+            '/change_file_dir', json={'path': new_test_folder}, headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == \
+            'You successfully changed working directory path. New path is {}'.format(new_test_folder)
+        assert handler.file_service.path == new_test_folder
         logging.info('Test is succeeded')

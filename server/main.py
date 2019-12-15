@@ -61,6 +61,7 @@ def main():
         web.post('/delete_method_from_role', handler.delete_method_from_role),
         web.post('/change_shared_prop', handler.change_shared_prop),
         web.post('/change_user_role', handler.change_user_role),
+        web.post('/change_file_dir', handler.change_file_dir),
     ])
     web.run_app(app, port=namespace.port)
 

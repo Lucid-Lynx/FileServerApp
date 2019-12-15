@@ -18,10 +18,22 @@ class FileService:
             cls.__instance = super(FileService, cls).__new__(cls)
         return cls.__instance
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         if not self.__is_inited:
-            self.path = path
+            if not os.path.exists(path):
+                os.mkdir(path)
+            self.__path = path
             self.__is_inited = True
+
+    @property
+    def path(self):
+        return self.__path
+
+    @path.setter
+    def path(self, value: str):
+        if not os.path.exists(value):
+            os.mkdir(value)
+        self.__path = value
 
     @staticmethod
     def change_dir(path: str):
