@@ -150,5 +150,6 @@ class DataBase:
             self.Method('delete_method_from_role', roles=[role_admin]),
             self.Method('change_shared_prop', roles=[role_admin]),
             self.Method('change_user_role', roles=[role_admin]),
+            self.Method('change_file_dir', roles=[role_admin]),
         ])
         session.commit()
