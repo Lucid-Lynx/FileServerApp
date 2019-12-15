@@ -13,7 +13,7 @@ class Handler:
     """
 
     def __init__(self, path):
-        self.path = path
+        self.file_service = FileService(path)
 
     async def handle(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Basic coroutine for connection testing.
@@ -47,7 +47,7 @@ class Handler:
 
         return web.json_response(data={
             'status': 'success',
-            'data': FileService(self.path).get_files(),
+            'data': self.file_service.get_files(),
         })
 
     @UsersAPI.authorized
@@ -71,7 +71,7 @@ class Handler:
         try:
             return web.json_response(data={
                 'status': 'success',
-                'data': FileService(self.path).get_file_data(filename, kwargs.get('user_id')),
+                'data': self.file_service.get_file_data(filename, kwargs.get('user_id')),
             })
 
         except (AssertionError, ValueError) as err:
@@ -107,8 +107,8 @@ class Handler:
             data = json.loads(result)
             return web.json_response(data={
                 'status': 'success',
-                'data': FileService(
-                    self.path).create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
+                'data': self.file_service.create_file(
+                    data.get('content'), data.get('security_level'), kwargs.get('user_id'))
             })
 
         except ValueError as err:
@@ -134,7 +134,7 @@ class Handler:
         try:
             return web.json_response(data={
                 'status': 'success',
-                'message': 'File {} is successfully deleted'.format(FileService(self.path).delete_file(filename)),
+                'message': 'File {} is successfully deleted'.format(self.file_service.delete_file(filename)),
             })
 
         except AssertionError as err:
@@ -461,7 +461,7 @@ class Handler:
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
     async def change_user_role(self, request: web.Request, *args, **kwargs) -> web.Response:
-        """Coroutine for setting new role to user .
+        """Coroutine for setting new role to user.
 
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
@@ -489,6 +489,44 @@ class Handler:
                 'status': 'success',
                 'message': 'You successfully changed role of user with email {}. New role is {}'.format(
                     data.get('email'), data.get('role')),
+            })
+
+        except (AssertionError, ValueError) as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
+    async def change_file_dir(self, request: web.Request, *args, **kwargs) -> web.Response:
+        """Coroutine for changing working directory with files.
+
+        Args:
+            request (Request): aiohttp request, contains JSON in body. JSON format:
+            {
+                "path": "string. Required",
+            }.
+
+        Returns:
+            Response: JSON response with success status.
+
+        """
+
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            path = data.get('path')
+            assert path, 'Directory path is not set'
+            self.file_service.path = path
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'You successfully changed working directory path. New path is {}'.format(data.get('path')),
             })
 
         except (AssertionError, ValueError) as err:
