@@ -1,3 +1,6 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 import server
 from setuptools import setup, find_packages
 from os.path import join, dirname

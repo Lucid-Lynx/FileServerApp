@@ -1,8 +1,11 @@
+Copyright 2019 by Kirill Kanin.
+All rights reserved.
+
 Description
 ===========
 
 File server project.
-Version: 1.10
+Version: 1.11
 
 Installing package:
 python setup.py install

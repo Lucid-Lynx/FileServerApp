@@ -1,3 +1,6 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 import re
 from datetime import datetime
 from aiohttp import web

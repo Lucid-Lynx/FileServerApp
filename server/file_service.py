@@ -1,7 +1,11 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 import os
-import server.utils as utils
 import typing
-from server.crypto import BaseCipher, AESCipher, RSACipher
+import server.utils as utils
+from collections import OrderedDict
+from server.crypto import BaseCipher, AESCipher, RSACipher, HashAPI
 
 extension = 'txt'
 
@@ -12,9 +16,10 @@ class FileService:
     """
 
     __is_inited = False
+    __instance = None
 
     def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, '__instance'):
+        if not isinstance(cls.__instance, cls):
             cls.__instance = super(FileService, cls).__new__(cls)
         return cls.__instance
 
@@ -71,9 +76,8 @@ class FileService:
         """
 
         short_filename = '{}.{}'.format(filename, extension)
-        full_filename = '{}/{}.{}'.format(self.path, filename, extension)
-        assert os.path.exists(full_filename), \
-            'File {}.{} does not exist'.format(filename, extension)
+        full_filename = '{}/{}'.format(self.path, short_filename)
+        assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
 
         filename_parts = filename.split('_')
         assert len(filename_parts) == 2, 'Invalid format of file name'
@@ -89,13 +93,13 @@ class FileService:
             raise ValueError('Security level is invalid')
 
         with open(full_filename, 'rb') as file_handler:
-            return {
-                'name': short_filename,
-                'content': cipher.decrypt(file_handler).decode('utf-8'),
-                'create_date': utils.convert_date(os.path.getctime(full_filename)),
-                'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
-                'size': '{} bytes'.format(os.path.getsize(full_filename), 'bytes'),
-            }
+            return OrderedDict(
+                name=short_filename,
+                create_date=utils.convert_date(os.path.getctime(full_filename)),
+                edit_date=utils.convert_date(os.path.getmtime(full_filename)),
+                size=os.path.getsize(full_filename),
+                content=cipher.decrypt(file_handler).decode('utf-8'),
+                user_id=user_id)
 
     def get_files(self) -> typing.List[typing.Dict[str, str]]:
         """Get info about all files in working directory.
@@ -163,9 +167,12 @@ class FileService:
                 data = bytes(content, 'utf-8')
                 cipher.write_cipher_text(data, file_handler)
 
-        return {
-            'name': filename,
-        }
+        return OrderedDict(
+            name=filename,
+            create_date=utils.convert_date(os.path.getctime(full_filename)),
+            size=os.path.getsize(full_filename),
+            content=content,
+            user_id=user_id)
 
     def delete_file(self, filename: str):
         """Delete file.
@@ -178,10 +185,81 @@ class FileService:
 
         """
 
-        filename = '{}.{}'.format(filename, extension)
-        full_filename = "{}/{}".format(self.path, filename)
-        assert os.path.exists(full_filename), 'File {} does not exist'.format(filename)
+        short_filename = '{}.{}'.format(filename, extension)
+        signature_file = '{}.{}'.format(filename, 'md5')
+        full_filename = "{}/{}".format(self.path, short_filename)
+        full_signature_file = "{}/{}".format(self.path, signature_file)
+        assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
 
         os.remove(full_filename)
 
-        return filename
+        if os.path.exists(full_signature_file):
+            os.remove(full_signature_file)
+
+        return short_filename
+
+
+class FileServiceSigned(FileService):
+
+    def get_file_data(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
+        """Get full info about file.
+
+        Args:
+            filename (str): Filename without .txt file extension,
+            user_id (int): User Id.
+
+        Returns:
+            Dict (key (str): value (str)), which contains full info about file. Keys:
+            name: name of file with .txt extension.
+            content: file content.
+            create_date: date of file creation.
+            edit_date: date of last file modification.
+            size: size of file in bytes.
+
+        Raises:
+            AssertionError: if file does not exist.
+
+        """
+
+        result = super().get_file_data(filename, user_id)
+        result_for_check = result
+        result_for_check.pop('edit_date')
+
+        short_filename = '{}.{}'.format(filename, 'md5')
+        full_filename = '{}/{}'.format(self.path, short_filename)
+        assert os.path.exists(full_filename), 'Signature file {} does not exist'.format(short_filename)
+
+        signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result_for_check.values()))))
+
+        with open(full_filename, 'rb') as file_handler:
+            assert file_handler.read() == bytes(signature, 'utf-8'), 'Signatures are not match'
+
+        return result
+
+    def create_file(
+            self, content: str = None, security_level: str = None, user_id: int = None) -> typing.Dict[str, str]:
+        """Create new .txt file.
+
+        Method generates name of file from random string with digits and latin letters.
+
+        Args:
+            content (str): String with file content,
+            security_level (str): String with security level,
+            user_id (int): User Id.
+
+        Returns:
+            Dict (key (str): value (str)), which contains name of created file. Keys:
+            name: name of file with .txt extension.
+
+        """
+
+        result = super().create_file(content, security_level, user_id)
+        signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result.values()))))
+        filename = '{}.{}'.format(result['name'].split('.')[0], 'md5')
+        full_filename = '{}/{}'.format(self.path, filename)
+
+        with open(full_filename, 'wb') as file_handler:
+            data = bytes(signature, 'utf-8')
+            file_handler.write(data)
+
+        return result
