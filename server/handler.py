@@ -138,7 +138,7 @@ class Handler:
         try:
             data = json.loads(result)
             is_signed = data.get('is_signed', False)
-            assert isinstance(is_signed, bool), "Is_signed should be boolean"
+            assert isinstance(is_signed, bool), 'Is_signed should be boolean'
 
             if is_signed:
                 file_service = self.file_service_signed

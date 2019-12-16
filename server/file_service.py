@@ -1,6 +1,6 @@
 import os
-import server.utils as utils
 import typing
+import server.utils as utils
 from collections import OrderedDict
 from server.crypto import BaseCipher, AESCipher, RSACipher, HashAPI
 
@@ -182,13 +182,18 @@ class FileService:
 
         """
 
-        filename = '{}.{}'.format(filename, extension)
-        full_filename = "{}/{}".format(self.path, filename)
-        assert os.path.exists(full_filename), 'File {} does not exist'.format(filename)
+        short_filename = '{}.{}'.format(filename, extension)
+        signature_file = '{}.{}'.format(filename, 'md5')
+        full_filename = "{}/{}".format(self.path, short_filename)
+        full_signature_file = "{}/{}".format(self.path, signature_file)
+        assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
 
         os.remove(full_filename)
 
-        return filename
+        if os.path.exists(full_signature_file):
+            os.remove(full_signature_file)
+
+        return short_filename
 
 
 class FileServiceSigned(FileService):
@@ -224,7 +229,7 @@ class FileServiceSigned(FileService):
         signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result_for_check.values()))))
 
         with open(full_filename, 'rb') as file_handler:
-            assert file_handler.read() == bytes(signature, 'utf-8'), "Signatures don't match"
+            assert file_handler.read() == bytes(signature, 'utf-8'), 'Signatures are not match'
 
         return result
 

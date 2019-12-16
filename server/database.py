@@ -22,7 +22,7 @@ class DataBase(metaclass=SingletonMeta):
 
     def __init__(self):
         if not self.__is_inited:
-            self.__engine = create_engine(self.__db_string)
+            self.__engine = create_engine(self.__db_string, pool_size=10, max_overflow=20)
             self.Base.metadata.create_all(bind=self.__engine)
             self.__is_inited = True
 
@@ -137,6 +137,7 @@ class DataBase(metaclass=SingletonMeta):
         session.add_all([
             self.Method('get_files', roles=[role_visitor, role_trusted, role_admin]),
             self.Method('get_file_info', roles=[role_visitor, role_trusted, role_admin]),
+            self.Method('get_file_info_signed', roles=[role_visitor, role_trusted, role_admin]),
             self.Method('create_file', roles=[role_trusted, role_admin]),
             self.Method('delete_file', roles=[role_trusted, role_admin]),
             self.Method('add_method', roles=[role_admin]),
