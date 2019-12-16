@@ -1,6 +1,6 @@
 import json
 from aiohttp import web
-from server.file_service import FileService
+from server.file_service import FileService, FileServiceSigned
 from server.users import UsersAPI
 from server.role_model import RoleModel
 from server.users_sql import UsersSQLAPI
@@ -14,6 +14,7 @@ class Handler:
 
     def __init__(self, path):
         self.file_service = FileService(path)
+        self.file_service_signed = FileServiceSigned(path)
 
     async def handle(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Basic coroutine for connection testing.
@@ -58,8 +59,7 @@ class Handler:
         """Coroutine for getting full info about file in working directory.
 
         Args:
-            request (Request): aiohttp request, contains filename,
-            user_id: "user id". Optional.
+            request (Request): aiohttp request, contains filename.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.
@@ -69,9 +69,41 @@ class Handler:
         filename = request.match_info['filename']
 
         try:
+            result = self.file_service.get_file_data(filename, kwargs.get('user_id'))
+            result.pop('user_id')
+
             return web.json_response(data={
                 'status': 'success',
-                'data': self.file_service.get_file_data(filename, kwargs.get('user_id')),
+                'data': result,
+            })
+
+        except (AssertionError, ValueError) as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
+    async def get_file_info_signed(self, request: web.Request, *args, **kwargs) -> web.Response:
+        """Coroutine for getting full info about file in working directory with checking it's signature.
+
+        Args:
+            request (Request): aiohttp request, contains filename.
+
+        Returns:
+            Response: JSON response with success status and data or error status and error message.
+
+        """
+
+        filename = request.match_info['filename']
+
+        try:
+            result = self.file_service_signed.get_file_data(filename, kwargs.get('user_id'))
+            result.pop('user_id')
+
+            return web.json_response(data={
+                'status': 'success',
+                'data': result,
             })
 
         except (AssertionError, ValueError) as err:
@@ -105,13 +137,23 @@ class Handler:
 
         try:
             data = json.loads(result)
+            is_signed = data.get('is_signed', False)
+            assert isinstance(is_signed, bool), 'Is_signed should be boolean'
+
+            if is_signed:
+                file_service = self.file_service_signed
+            else:
+                file_service = self.file_service
+
+            result = file_service.create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
+            result.pop('user_id')
+
             return web.json_response(data={
                 'status': 'success',
-                'data': self.file_service.create_file(
-                    data.get('content'), data.get('security_level'), kwargs.get('user_id'))
+                'data': result,
             })
 
-        except ValueError as err:
+        except (AssertionError, ValueError) as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
     @UsersAPI.authorized
@@ -524,6 +566,7 @@ class Handler:
             path = data.get('path')
             assert path, 'Directory path is not set'
             self.file_service.path = path
+            self.file_service_signed.path = path
             return web.json_response(data={
                 'status': 'success',
                 'message': 'You successfully changed working directory path. New path is {}'.format(data.get('path')),

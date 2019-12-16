@@ -5,6 +5,16 @@ from datetime import datetime
 string_length = 8
 
 
+class SingletonMeta(type):
+
+    __instance = None
+
+    def __call__(cls):
+        if not isinstance(cls.__instance, cls):
+            cls.__instance = super().__call__()
+        return cls.__instance
+
+
 def generate_string() -> str:
     """Generate random string.
 

@@ -46,10 +46,11 @@ def main():
     app = web.Application()
     app.add_routes([
         web.get('/', handler.handle),
-        web.get('/notes', handler.get_files),
-        web.get('/notes/{filename}', handler.get_file_info),
-        web.post('/notes', handler.create_file),
-        web.delete('/notes/{filename}', handler.delete_file),
+        web.get('/files', handler.get_files),
+        web.get('/files/{filename}', handler.get_file_info),
+        web.get('/files/{filename}/signed', handler.get_file_info_signed),
+        web.post('/files', handler.create_file),
+        web.delete('/files/{filename}', handler.delete_file),
         web.post('/signup', handler.signup),
         web.post('/signin', handler.signin),
         web.get('/logout', handler.logout),

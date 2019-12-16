@@ -6,11 +6,13 @@ from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime, timedelta
 from uuid import uuid4
 from server.crypto import HashAPI
+from server.utils import SingletonMeta
 
 
-class DataBase:
+class DataBase(metaclass=SingletonMeta):
 
     __is_inited = False
+    __instance = None
     __db_string = "postgres://{}:{}@{}/{}".format(
         os.environ['DB_USER'],
         os.environ['DB_PASSWORD'],
@@ -18,14 +20,9 @@ class DataBase:
         os.environ['DB_NAME'])
     Base = declarative_base()
 
-    def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, '__instance'):
-            cls.__instance = super(DataBase, cls).__new__(cls)
-        return cls.__instance
-
     def __init__(self):
         if not self.__is_inited:
-            self.__engine = create_engine(self.__db_string)
+            self.__engine = create_engine(self.__db_string, pool_size=10, max_overflow=20)
             self.Base.metadata.create_all(bind=self.__engine)
             self.__is_inited = True
 
@@ -140,6 +137,7 @@ class DataBase:
         session.add_all([
             self.Method('get_files', roles=[role_visitor, role_trusted, role_admin]),
             self.Method('get_file_info', roles=[role_visitor, role_trusted, role_admin]),
+            self.Method('get_file_info_signed', roles=[role_visitor, role_trusted, role_admin]),
             self.Method('create_file', roles=[role_trusted, role_admin]),
             self.Method('delete_file', roles=[role_trusted, role_admin]),
             self.Method('add_method', roles=[role_admin]),

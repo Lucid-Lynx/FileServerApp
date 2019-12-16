@@ -2,11 +2,12 @@ import os
 import pytest
 import json
 import logging
+import server.utils as utils
+from collections import OrderedDict
 from aiohttp import web
 from server.handler import Handler
 from server.database import DataBase
-from server.file_service import FileService
-from server.crypto import HashAPI
+from server.crypto import HashAPI, AESCipher, RSACipher
 
 logger = logging.getLogger("Test Logger")
 
@@ -16,6 +17,14 @@ test_file_1 = 'test1_low.txt'
 test_file_2 = 'test2_test.txt'
 test_file_3 = 'test3.txt'
 test_file_4 = 'test4_low.txt'
+test_signature_file_4 = 'test4_low.md5'
+test_file_5 = 'test5_high.txt'
+test_signature_file_5 = 'test5_high.md5'
+test_file_6 = 'test6_medium.txt'
+test_signature_file_6 = 'test6_medium.md5'
+test_file_7 = 'test7_low.txt'
+test_signature_file_7 = 'test7_low.md5'
+test_file_8 = 'test8_low.txt'
 test_content = 'Test content/n'
 
 
@@ -26,19 +35,29 @@ def create_and_move_to_test_folder():
 
 def create_test_files():
     full_test_file_1 = '{}/{}'.format(test_folder, test_file_1)
-    if not os.path.exists(full_test_file_1):
-        with open(full_test_file_1, 'w') as file_handler:
-            file_handler.write(test_content)
+    with open(full_test_file_1, 'wb') as file_handler:
+        data = bytes(test_content, 'utf-8')
+        file_handler.write(data)
 
     full_test_file_2 = '{}/{}'.format(test_folder, test_file_2)
-    if not os.path.exists(full_test_file_2):
-        with open(full_test_file_2, 'w') as file_handler:
-            file_handler.write(test_content)
+    with open(full_test_file_2, 'wb') as file_handler:
+        data = bytes(test_content, 'utf-8')
+        file_handler.write(data)
 
     full_test_file_3 = '{}/{}'.format(test_folder, test_file_3)
-    if not os.path.exists(full_test_file_3):
-        with open(full_test_file_3, 'w') as file_handler:
-            file_handler.write(test_content)
+    with open(full_test_file_3, 'wb') as file_handler:
+        data = bytes(test_content, 'utf-8')
+        file_handler.write(data)
+
+    full_test_file_4 = '{}/{}'.format(test_folder, test_file_4)
+    with open(full_test_file_4, 'wb') as file_handler:
+        data = bytes(test_content, 'utf-8')
+        file_handler.write(data)
+
+    full_test_file_7 = '{}/{}'.format(test_folder, test_file_7)
+    with open(full_test_file_7, 'wb') as file_handler:
+        data = bytes(test_content, 'utf-8')
+        file_handler.write(data)
 
 
 @pytest.fixture
@@ -49,10 +68,11 @@ def client(loop, aiohttp_client):
     handler = Handler(test_folder)
     app = web.Application()
     app.router.add_get('/', handler.handle)
-    app.router.add_get('/notes', handler.get_files)
-    app.router.add_get('/notes/{filename}', handler.get_file_info)
-    app.router.add_post('/notes', handler.create_file)
-    app.router.add_delete('/notes/{filename}', handler.delete_file)
+    app.router.add_get('/files', handler.get_files)
+    app.router.add_get('/files/{filename}', handler.get_file_info)
+    app.router.add_get('/files/{filename}/signed', handler.get_file_info_signed)
+    app.router.add_post('/files', handler.create_file)
+    app.router.add_delete('/files/{filename}', handler.delete_file)
     app.router.add_post('/signup', handler.signup)
     app.router.add_post('/signin', handler.signin)
     app.router.add_get('/logout', handler.logout)
@@ -75,9 +95,9 @@ def prepare_data(request):
     db = DataBase()
     db_session = db.create_session()
     testing_methods = db_session.query(db.Method).filter(db.Method.name.in_([
-        'get_files', 'get_file_info', 'create_file', 'delete_file', 'add_method', 'delete_method', 'add_role',
-        'delete_role', 'add_method_to_role', 'delete_method_from_role', 'change_shared_prop', 'change_user_role',
-        'change_file_dir'])).all()
+        'get_files', 'get_file_info', 'get_file_info_signed', 'create_file', 'delete_file', 'add_method',
+        'delete_method', 'add_role', 'delete_role', 'add_method_to_role', 'delete_method_from_role',
+        'change_shared_prop', 'change_user_role', 'change_file_dir'])).all()
     test_method = db.Method('test_method_1')
     testing_methods.append(test_method)
     test_role_denied = db.Role('test_role_1')
@@ -91,6 +111,68 @@ def prepare_data(request):
         db.User('user3@test.su', HashAPI.hash_sha512('3test1234'), 'User3'))
     db_session.add_all([session_denied, session_allowed, session_no_role, test_role_no_user])
     db_session.commit()
+
+    user = db_session.query(db.User).filter_by(email='user2@test.su').first()
+
+    full_test_file_4 = '{}/{}'.format(test_folder, test_file_4)
+    file_dict_4 = OrderedDict(
+        name=test_file_4,
+        create_date=utils.convert_date(os.path.getctime(full_test_file_4)),
+        size=os.path.getsize(full_test_file_4),
+        content=test_content,
+        user_id=user.id)
+    full_test_signature_file_4 = '{}/{}'.format(test_folder, test_signature_file_4)
+    signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict_4.values()))))
+    with open(full_test_signature_file_4, 'wb') as file_handler:
+        data = bytes(signature, 'utf-8')
+        file_handler.write(data)
+
+    cipher = RSACipher(user.id)
+    full_test_file_5 = '{}/{}'.format(test_folder, test_file_5)
+    with open(full_test_file_5, 'wb') as file_handler:
+        data = bytes(test_content, 'utf-8')
+        cipher.write_cipher_text(data, file_handler)
+    file_dict = OrderedDict(
+        name=test_file_5,
+        create_date=utils.convert_date(os.path.getctime(full_test_file_5)),
+        size=os.path.getsize(full_test_file_5),
+        content=test_content,
+        user_id=user.id)
+    full_test_signature_file_5 = '{}/{}'.format(test_folder, test_signature_file_5)
+    signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict.values()))))
+    with open(full_test_signature_file_5, 'wb') as file_handler:
+        data = bytes(signature, 'utf-8')
+        file_handler.write(data)
+
+    cipher = AESCipher(user.id)
+    full_test_file_6 = '{}/{}'.format(test_folder, test_file_6)
+    with open(full_test_file_6, 'wb') as file_handler:
+        data = bytes(test_content, 'utf-8')
+        cipher.write_cipher_text(data, file_handler)
+    file_dict = OrderedDict(
+        name=test_file_6,
+        create_date=utils.convert_date(os.path.getctime(full_test_file_6)),
+        size=os.path.getsize(full_test_file_6),
+        content=test_content,
+        user_id=user.id)
+    full_test_signature_file_6 = '{}/{}'.format(test_folder, test_signature_file_6)
+    signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict.values()))))
+    with open(full_test_signature_file_6, 'wb') as file_handler:
+        data = bytes(signature, 'utf-8')
+        file_handler.write(data)
+
+    full_test_file_7 = '{}/{}'.format(test_folder, test_file_7)
+    file_dict_7 = OrderedDict(
+        name=test_file_7,
+        create_date=utils.convert_date(os.path.getctime(full_test_file_7)),
+        size=os.path.getsize(full_test_file_7),
+        content='Test',
+        user_id=user.id)
+    full_test_signature_file_7 = '{}/{}'.format(test_folder, test_signature_file_7)
+    signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict_7.values()))))
+    with open(full_test_signature_file_7, 'wb') as file_handler:
+        data = bytes(signature, 'utf-8')
+        file_handler.write(data)
 
     request.addfinalizer(teardown)
 
@@ -163,48 +245,53 @@ class TestSuite:
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
 
         logging.info('Test request. Method not allowed')
-        resp = await client.put('/notes')
+        resp = await client.put('/files')
         assert resp.status == 405
         logging.info('Test is succeeded')
 
         logging.info('Test request. User is not logged in')
-        resp = await client.get('/notes')
+        resp = await client.get('/files')
         assert resp.status == 401
         assert await resp.text() == 'Unauthorized request'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Session expired')
-        resp = await client.get('/notes', headers={'Authorization': 'test'})
+        resp = await client.get('/files', headers={'Authorization': 'test'})
         assert resp.status == 401
         assert await resp.text() == 'Session expired. Please, sign in again'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Access denied')
-        resp = await client.get('/notes', headers={'Authorization': session_denied.uuid})
+        resp = await client.get('/files', headers={'Authorization': session_denied.uuid})
         assert resp.status == 403
         assert await resp.text() == 'Access denied'
         logging.info('Test is succeeded')
 
         logging.info('Test request. User without role')
-        resp = await client.get('/notes', headers={'Authorization': session_no_role.uuid})
+        resp = await client.get('/files', headers={'Authorization': session_no_role.uuid})
         assert resp.status == 403
         assert await resp.text() == 'User is not attached to role'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Access allowed')
-        resp = await client.get('/notes', headers={'Authorization': session_allowed.uuid})
+        resp = await client.get('/files', headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
         data = result.get('data')
         exists_files = list(filter(
-            lambda file: file.get('name') in [test_file_1, test_file_2, test_file_3], data))
+            lambda file: file.get('name') in [
+                test_file_1, test_file_2, test_file_3, test_file_4, test_file_5, test_file_6, test_file_7], data))
         exists_files = list(map(lambda file: file.get('name'), exists_files))
-        assert len(exists_files) == 3
+        assert len(exists_files) == 7
         assert test_file_1 in exists_files
         assert test_file_2 in exists_files
         assert test_file_3 in exists_files
-        assert not (test_file_4 in exists_files)
+        assert test_file_4 in exists_files
+        assert test_file_5 in exists_files
+        assert test_file_6 in exists_files
+        assert test_file_7 in exists_files
+        assert not (test_file_8 in exists_files)
         logging.info('Test is succeeded')
 
     async def test_get_file_info(self, client, prepare_data):
@@ -213,36 +300,36 @@ class TestSuite:
         test_file_part = test_file_1.split('.')[0]
 
         logging.info('Test request. Method not allowed')
-        resp = await client.put('/notes/{}'.format(test_file_part))
+        resp = await client.put('/files/{}'.format(test_file_part))
         assert resp.status == 405
         logging.info('Test is succeeded')
 
         logging.info('Test request. User is not logged in')
-        resp = await client.get('/notes/{}'.format(test_file_part))
+        resp = await client.get('/files/{}'.format(test_file_part))
         assert resp.status == 401
         assert await resp.text() == 'Unauthorized request'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Session expired')
-        resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': 'test'})
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': 'test'})
         assert resp.status == 401
         assert await resp.text() == 'Session expired. Please, sign in again'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Access denied')
-        resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_denied.uuid})
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_denied.uuid})
         assert resp.status == 403
         assert await resp.text() == 'Access denied'
         logging.info('Test is succeeded')
 
         logging.info('Test request. User without role')
-        resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_no_role.uuid})
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_no_role.uuid})
         assert resp.status == 403
         assert await resp.text() == 'User is not attached to role'
         logging.info('Test is succeeded')
 
-        logging.info('Test request. Access allowed. File exists')
-        resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        logging.info('Test request. Access allowed. File exists. Security level is low')
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
@@ -253,26 +340,171 @@ class TestSuite:
         assert content == test_content
         logging.info('Test is succeeded')
 
+        logging.info('Test request. Access allowed. File exists. Security level is high')
+        test_file_part = test_file_5.split('.')[0]
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        assert filename == test_file_5
+        content = result.get('data').get('content')
+        assert content == test_content
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. File exists. Security level is medium')
+        test_file_part = test_file_6.split('.')[0]
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        assert filename == test_file_6
+        content = result.get('data').get('content')
+        assert content == test_content
+        logging.info('Test is succeeded')
+
         logging.info('Test request. Access allowed. Security level is invalid')
         test_file_part = test_file_2.split('.')[0]
-        resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Security level is invalid'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Access allowed. File name is invalid')
         test_file_part = test_file_3.split('.')[0]
-        resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Invalid format of file name'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Access allowed. File does not exist')
-        test_file_part = test_file_4.split('.')[0]
-        resp = await client.get('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        test_file_part = test_file_8.split('.')[0]
+        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
-        assert await resp.text() == 'File {} does not exist'.format(test_file_4)
-        assert not os.path.exists('{}/{}'.format(test_folder, test_file_4))
+        assert await resp.text() == 'File {} does not exist'.format(test_file_8)
+        assert not os.path.exists('{}/{}'.format(test_folder, test_file_8))
+        logging.info('Test is succeeded')
+
+    async def test_get_file_info_signed(self, client, prepare_data):
+        client, handler = tuple(client)
+        session_denied, session_allowed, session_no_role = tuple(prepare_data)
+        test_file_part = test_file_4.split('.')[0]
+
+        logging.info('Test request. Method not allowed')
+        resp = await client.put('/files/{}/signed'.format(test_file_part))
+        assert resp.status == 405
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User is not logged in')
+        resp = await client.get('/files/{}/signed'.format(test_file_part))
+        assert resp.status == 401
+        assert await resp.text() == 'Unauthorized request'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Session expired')
+        resp = await client.get('/files/{}/signed'.format(test_file_part), headers={'Authorization': 'test'})
+        assert resp.status == 401
+        assert await resp.text() == 'Session expired. Please, sign in again'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access denied')
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_denied.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'Access denied'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. User without role')
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_no_role.uuid})
+        assert resp.status == 403
+        assert await resp.text() == 'User is not attached to role'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. File exists. Security level is low. Signatures are match')
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        assert filename == test_file_4
+        content = result.get('data').get('content')
+        assert content == test_content
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. File exists. Security level is high. Signatures are match')
+        test_file_part = test_file_5.split('.')[0]
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        assert filename == test_file_5
+        content = result.get('data').get('content')
+        assert content == test_content
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. File exists. Security level is medium. Signatures are match')
+        test_file_part = test_file_6.split('.')[0]
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        assert filename == test_file_6
+        content = result.get('data').get('content')
+        assert content == test_content
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Security level is invalid')
+        test_file_part = test_file_2.split('.')[0]
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Security level is invalid'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. File name is invalid')
+        test_file_part = test_file_3.split('.')[0]
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Invalid format of file name'
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. File does not exist')
+        test_file_part = test_file_8.split('.')[0]
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'File {} does not exist'.format(test_file_8)
+        assert not os.path.exists('{}/{}'.format(test_folder, test_file_8))
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Signature file does not exist')
+        test_file_part = test_file_1.split('.')[0]
+        signature_file = '{}.{}'.format(test_file_part, 'md5')
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Signature file {} does not exist'.format(signature_file)
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Signatures are not match')
+        test_file_part = test_file_7.split('.')[0]
+        resp = await client.get(
+            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Signatures are not match'
         logging.info('Test is succeeded')
 
     async def test_create_file(self, client, prepare_data):
@@ -280,19 +512,19 @@ class TestSuite:
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
 
         logging.info('Test request. Method not allowed')
-        resp = await client.put('/notes', json={'content': test_content, 'security_level': 'high'})
+        resp = await client.put('/files', json={'content': test_content, 'security_level': 'high'})
         assert resp.status == 405
         logging.info('Test is succeeded')
 
         logging.info('Test request. User is not logged in')
-        resp = await client.post('/notes', json={'content': test_content, 'security_level': 'high'})
+        resp = await client.post('/files', json={'content': test_content, 'security_level': 'high'})
         assert resp.status == 401
         assert await resp.text() == 'Unauthorized request'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Session expired')
         resp = await client.post(
-            '/notes',
+            '/files',
             json={'content': test_content, 'security_level': 'high'},
             headers={'Authorization': 'test'})
         assert resp.status == 401
@@ -301,7 +533,7 @@ class TestSuite:
 
         logging.info('Test request. Access denied')
         resp = await client.post(
-            '/notes',
+            '/files',
             json={'content': test_content, 'security_level': 'high'},
             headers={'Authorization': session_denied.uuid})
         assert resp.status == 403
@@ -310,7 +542,7 @@ class TestSuite:
 
         logging.info('Test request. User without role')
         resp = await client.post(
-            '/notes',
+            '/files',
             json={'content': test_content, 'security_level': 'high'},
             headers={'Authorization': session_no_role.uuid})
         assert resp.status == 403
@@ -319,16 +551,69 @@ class TestSuite:
 
         logging.info('Test request. Access allowed. Security level is invalid')
         resp = await client.post(
-            '/notes',
+            '/files',
             json={'content': test_content, 'security_level': 'test'},
             headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Security level is invalid'
         logging.info('Test is succeeded')
 
-        logging.info('Test request. Access allowed. Content is not empty. Security level is not empty')
+        logging.info(
+            'Test request. Access allowed. Content is not empty. Security level is not empty. File is not signed')
         resp = await client.post(
-            '/notes',
+            '/files',
+            json={'content': test_content, 'security_level': 'high', 'is_signed': False},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Content is empty. Security level is not empty. File is not signed')
+        resp = await client.post(
+            '/files',
+            json={'security_level': 'high', 'is_signed': False},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Content is not empty. Security level is empty. File is not signed')
+        resp = await client.post(
+            '/files',
+            json={'content': test_content, 'is_signed': False},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        logging.info('Test is succeeded')
+
+        logging.info('Test request. Access allowed. Content is not empty. Security level is not empty. File is signed')
+        resp = await client.post(
+            '/files',
+            json={'content': test_content, 'security_level': 'high', 'is_signed': True},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        signature_file = '{}.{}'.format(filename.split('.')[0], 'md5')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        assert os.path.exists('{}/{}'.format(test_folder, signature_file))
+        logging.info('Test is succeeded')
+
+        logging.info(
+            'Test request. Access allowed. Content is not empty. Security level is not empty. '
+            'Is_signed parameter is not set')
+        resp = await client.post(
+            '/files',
             json={'content': test_content, 'security_level': 'high'},
             headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
@@ -338,24 +623,13 @@ class TestSuite:
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         logging.info('Test is succeeded')
 
-        logging.info('Test request. Access allowed. Content is empty. Security level is not empty')
+        logging.info('Test request. Access allowed. Is_signed parameter is invalid')
         resp = await client.post(
-            '/notes', json={'security_level': 'high'}, headers={'Authorization': session_allowed.uuid})
-        assert resp.status == 200
-        result = json.loads(await resp.text())
-        assert result.get('status') == 'success'
-        filename = result.get('data').get('name')
-        assert os.path.exists('{}/{}'.format(test_folder, filename))
-        logging.info('Test is succeeded')
-
-        logging.info('Test request. Access allowed. Content is not empty. Security level is empty')
-        resp = await client.post(
-            '/notes', json={'content': test_content}, headers={'Authorization': session_allowed.uuid})
-        assert resp.status == 200
-        result = json.loads(await resp.text())
-        assert result.get('status') == 'success'
-        filename = result.get('data').get('name')
-        assert os.path.exists('{}/{}'.format(test_folder, filename))
+            '/files',
+            json={'content': test_content, 'security_level': 'test', 'is_signed': 'test'},
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Is_signed should be boolean'
         logging.info('Test is succeeded')
 
     async def test_delete_file(self, client, prepare_data):
@@ -364,48 +638,51 @@ class TestSuite:
         test_file_part = test_file_2.split('.')[0]
 
         logging.info('Test request. Method not allowed')
-        resp = await client.put('/notes/{}'.format(test_file_part))
+        resp = await client.put('/files/{}'.format(test_file_part))
         assert resp.status == 405
         logging.info('Test is succeeded')
 
         logging.info('Test request. User is not logged in')
-        resp = await client.delete('/notes/{}'.format(test_file_part))
+        resp = await client.delete('/files/{}'.format(test_file_part))
         assert resp.status == 401
         assert await resp.text() == 'Unauthorized request'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Session expired')
-        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': 'test'})
+        resp = await client.delete('/files/{}'.format(test_file_part), headers={'Authorization': 'test'})
         assert resp.status == 401
         assert await resp.text() == 'Session expired. Please, sign in again'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Access denied')
-        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_denied.uuid})
+        resp = await client.delete('/files/{}'.format(test_file_part), headers={'Authorization': session_denied.uuid})
         assert resp.status == 403
         assert await resp.text() == 'Access denied'
         logging.info('Test is succeeded')
 
         logging.info('Test request. User without role')
-        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_no_role.uuid})
+        resp = await client.delete('/files/{}'.format(test_file_part), headers={'Authorization': session_no_role.uuid})
         assert resp.status == 403
         assert await resp.text() == 'User is not attached to role'
         logging.info('Test is succeeded')
 
         logging.info('Test request. Access allowed. File exists')
-        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        resp = await client.delete('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
         assert result.get('message') == 'File {} is successfully deleted'.format(test_file_2)
+        signature_file = '{}.{}'.format(test_file_part, 'md5')
+        assert not os.path.exists('{}/{}'.format(test_folder, test_file_2))
+        assert not os.path.exists('{}/{}'.format(test_folder, signature_file))
         logging.info('Test is succeeded')
 
         logging.info('Test request. Access allowed. File does not exist')
-        test_file_part = test_file_4.split('.')[0]
-        resp = await client.delete('/notes/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        test_file_part = test_file_8.split('.')[0]
+        resp = await client.delete('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
-        assert await resp.text() == 'File {} does not exist'.format(test_file_4)
-        assert not os.path.exists('{}/{}'.format(test_folder, test_file_4))
+        assert await resp.text() == 'File {} does not exist'.format(test_file_8)
+        assert not os.path.exists('{}/{}'.format(test_folder, test_file_8))
         logging.info('Test is succeeded')
 
     async def test_signup(self, client, prepare_data):
@@ -1264,4 +1541,5 @@ class TestSuite:
         assert result.get('message') == \
             'You successfully changed working directory path. New path is {}'.format(new_test_folder)
         assert handler.file_service.path == new_test_folder
+        assert handler.file_service_signed.path == new_test_folder
         logging.info('Test is succeeded')
