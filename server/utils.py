@@ -9,6 +9,9 @@ string_length = 8
 
 
 class SingletonMeta(type):
+    """Meta class for singletons.
+
+    """
 
     __instance = None
 

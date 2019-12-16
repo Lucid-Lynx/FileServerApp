@@ -12,9 +12,24 @@ key_folder = '../keys'
 
 
 class HashAPI:
+    """Class with static methods for generating hashes.
+
+    """
 
     @staticmethod
     def hash_sha512(input_str: str) -> str:
+        """Generate hash SHA-512.
+
+        Args:
+            input_str (str): Input string.
+
+        Returns:
+            Str with hash in hex format.
+
+        Raises:
+            AssertionError: if input string is not set.
+
+        """
 
         assert input_str, 'Hash: input string is not set'
         hash_obj = hashlib.sha512(input_str.encode())
@@ -23,6 +38,19 @@ class HashAPI:
 
     @staticmethod
     def hash_md5(input_str: str) -> str:
+        """Generate hash MD5.
+
+        Args:
+            input_str (str): Input string.
+
+        Returns:
+            Str with hash in hex format.
+
+        Raises:
+            AssertionError: if input string is not set.
+
+        """
+
         assert input_str, 'Hash: input string is not set'
         hash_obj = hashlib.md5(input_str.encode())
 
@@ -30,22 +58,53 @@ class HashAPI:
 
 
 class BaseCipher:
+    """Base cipher class.
+
+    """
 
     def __init__(self):
         if not os.path.exists(key_folder):
             os.mkdir(key_folder)
 
     def encrypt(self, data: bytes):
+        """Encrypt data.
+
+        Args:
+            data (bytes): Input data for encrypting.
+
+        """
+
         pass
 
     def decrypt(self, input_file: BinaryIO) -> bytes:
+        """Decrypt data.
+
+        Args:
+            input_file (BinaryIO): Input file with data for decrypting.
+
+        Returns:
+            Bytes with decrypted data.
+
+        """
+
         return input_file.read()
 
     def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+        """Encrypt data and write cipher text into output file.
+
+        Args:
+            data (bytes): Encrypted data,
+            out_file(BinaryIO): Output file.
+
+        """
+
         out_file.write(data)
 
 
 class AESCipher(BaseCipher):
+    """AES cipher class.
+
+    """
 
     def __init__(self, user_id: int):
         super().__init__()
@@ -53,6 +112,16 @@ class AESCipher(BaseCipher):
         self.session_key_file = '{}/{}_session_aes_key.bin'.format(key_folder, self.user_id)
 
     def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes, bytes]:
+        """Encrypt data.
+
+        Args:
+            data (bytes): Input data for encrypting.
+
+        Returns:
+            Tuple with bytes values, which contains cipher text, tag, nonce and session key.
+
+        """
+
         session_key = get_random_bytes(16)
         cipher_aes = AES.new(session_key, AES.MODE_EAX)
         cipher_text, tag = cipher_aes.encrypt_and_digest(data)
@@ -60,6 +129,16 @@ class AESCipher(BaseCipher):
         return cipher_text, tag, cipher_aes.nonce, session_key
 
     def decrypt(self, input_file: BinaryIO) -> bytes:
+        """Decrypt data.
+
+        Args:
+            input_file (BinaryIO): Input file with data for decrypting.
+
+        Returns:
+            Bytes with decrypted data.
+
+        """
+
         nonce, tag, cipher_text = [input_file.read(x) for x in (16, 16, -1)]
         session_key = open(self.session_key_file, 'rb').read()
 
@@ -67,12 +146,33 @@ class AESCipher(BaseCipher):
 
     @staticmethod
     def decrypt_aes_data(cipher_text: bytes, tag: bytes, nonce: bytes, session_key: bytes) -> bytes:
+        """Decrypt AES data.
+
+        Args:
+            cipher_text (bytes): Cipher text for decrypting,
+            tag (bytes): AES tag,
+            nonce (bytes): AES nonce,
+            session_key (bytes): AES session key.
+
+        Returns:
+            Bytes with decrypted data.
+
+        """
+
         cipher_aes = AES.new(session_key, AES.MODE_EAX, nonce)
         data = cipher_aes.decrypt_and_verify(cipher_text, tag)
 
         return data
 
     def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+        """Encrypt data and write cipher text into output file.
+
+        Args:
+            data (bytes): Encrypted data,
+            out_file(BinaryIO): Output file.
+
+        """
+
         cipher_text, tag, nonce, session_key = self.encrypt(data)
 
         if not os.path.exists(self.session_key_file):
@@ -85,6 +185,10 @@ class AESCipher(BaseCipher):
 
 
 class RSACipher(AESCipher):
+    """RSA cipher class.
+
+    """
+
     code = os.environ['CRYPTO_CODE']
     key_protection = 'scryptAndAES128-CBC'
 
@@ -105,6 +209,16 @@ class RSACipher(AESCipher):
                 f.write(key.publickey().exportKey())
 
     def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes, bytes]:
+        """Encrypt data.
+
+        Args:
+            data (bytes): Input data for encrypting.
+
+        Returns:
+            Tuple with bytes values, which contains cipher text, tag, nonce and session key.
+
+        """
+
         cipher_text, tag, nonce, session_key = super().encrypt(data)
 
         public_key = RSA.import_key(open(self.public_key_file).read())
@@ -114,6 +228,16 @@ class RSACipher(AESCipher):
         return cipher_text, tag, nonce, enc_session_key
 
     def decrypt(self, input_file: BinaryIO) -> bytes:
+        """Decrypt data.
+
+        Args:
+            input_file (BinaryIO): Input file with data for decrypting.
+
+        Returns:
+            Bytes with decrypted data.
+
+        """
+
         private_key = RSA.import_key(open(self.private_key_file).read(), passphrase=self.code)
         enc_session_key, nonce, tag, cipher_text = [
             input_file.read(x) for x in (private_key.size_in_bytes(), 16, 16, -1)]
@@ -123,6 +247,14 @@ class RSACipher(AESCipher):
         return self.decrypt_aes_data(cipher_text, tag, nonce, session_key)
 
     def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+        """Encrypt data and write cipher text into output file.
+
+        Args:
+            data (bytes): Encrypted data,
+            out_file(BinaryIO): Output file.
+
+        """
+
         cipher_text, tag, nonce, session_key = self.encrypt(data)
         out_file.write(session_key)
         out_file.write(nonce)

@@ -6,6 +6,8 @@ from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy.orm.session import Session
+from sqlalchemy.engine.base import Engine
 from datetime import datetime, timedelta
 from uuid import uuid4
 from server.crypto import HashAPI
@@ -13,6 +15,9 @@ from server.utils import SingletonMeta
 
 
 class DataBase(metaclass=SingletonMeta):
+    """Singleton class for ORM.
+
+    """
 
     __is_inited = False
     __instance = None
@@ -30,6 +35,9 @@ class DataBase(metaclass=SingletonMeta):
             self.__is_inited = True
 
     class BaseModel:
+        """Base database model.
+
+        """
 
         @declared_attr
         def __tablename__(self):
@@ -42,6 +50,9 @@ class DataBase(metaclass=SingletonMeta):
             self.create_dt = datetime.now()
 
     class User(BaseModel, Base):
+        """User model.
+
+        """
 
         email = Column(String, name='Email', unique=True)
         password = Column(String, name='Password')
@@ -64,6 +75,9 @@ class DataBase(metaclass=SingletonMeta):
                 self.sessions.extend(sessions)
 
     class Role(BaseModel, Base):
+        """Role model.
+
+        """
 
         name = Column(String, name='Name', unique=True)
         users = relationship('User', back_populates='role', cascade='all, delete-orphan')
@@ -81,6 +95,9 @@ class DataBase(metaclass=SingletonMeta):
                 self.methods.extend(method_role_list)
 
     class Method(BaseModel, Base):
+        """Method model.
+
+        """
 
         name = Column(String, name='Name', unique=True)
         shared = Column(Boolean, name='Shared', default=False)
@@ -96,6 +113,9 @@ class DataBase(metaclass=SingletonMeta):
                 self.roles.extend(method_role_list)
 
     class Session(BaseModel, Base):
+        """Session model.
+
+        """
 
         uuid = Column(String, name='UUID', unique=True)
         exp_dt = Column(DateTime, name='Expiration Date')
@@ -109,6 +129,9 @@ class DataBase(metaclass=SingletonMeta):
             self.user = user
 
     class MethodRole(Base):
+        """Many to many model for method and role models.
+
+        """
 
         __tablename__ = 'MethodRole'
 
@@ -122,13 +145,31 @@ class DataBase(metaclass=SingletonMeta):
         role = relationship('Role', back_populates='methods')
 
     @property
-    def engine(self):
+    def engine(self) -> Engine:
+        """Database engine getter.
+
+        Returns:
+            Database engine.
+
+        """
+
         return self.__engine
 
-    def create_session(self):
+    def create_session(self) -> Session:
+        """Create and get database connection session.
+
+        Returns:
+            Database connection session.
+
+        """
+
         return sessionmaker(bind=self.__engine)()
 
     def init_system(self):
+        """Initialize database.
+
+        """
+
         self.Base.metadata.drop_all(bind=self.__engine)
         self.Base.metadata.create_all(bind=self.__engine)
         session = self.create_session()

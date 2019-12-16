@@ -11,7 +11,7 @@ extension = 'txt'
 
 
 class FileService:
-    """Class with static methods for working with file system.
+    """Singleton class with methods for working with file system.
 
     """
 
@@ -31,11 +31,25 @@ class FileService:
             self.__is_inited = True
 
     @property
-    def path(self):
+    def path(self) -> str:
+        """Working directory path getter.
+
+        Returns:
+            Str with working directory path.
+
+        """
+
         return self.__path
 
     @path.setter
     def path(self, value: str):
+        """Working directory path setter.
+
+        Args:
+            value (str): Working directory path.
+
+        """
+
         if not os.path.exists(value):
             os.mkdir(value)
         self.__path = value
@@ -63,15 +77,16 @@ class FileService:
             user_id (int): User Id.
 
         Returns:
-            Dict (key (str): value (str)), which contains full info about file. Keys:
-            name: name of file with .txt extension.
-            content: file content.
-            create_date: date of file creation.
-            edit_date: date of last file modification.
-            size: size of file in bytes.
+            Dict, which contains full info about file. Keys:
+                name (str): name of file with .txt extension.
+                content (str): file content.
+                create_date (str): date of file creation.
+                edit_date (str): date of last file modification.
+                size (int): size of file in bytes,
+                user_id (int): user Id.
 
         Raises:
-            AssertionError: if file does not exist.
+            AssertionError: if file does not exist, security level is invalid, filename format is invalid.
 
         """
 
@@ -105,16 +120,17 @@ class FileService:
         """Get info about all files in working directory.
 
         Returns:
-            List of dicts (key (str): value (str)), which contains info about each file. Keys:
-            name: name of file with .txt extension.
-            create_date: date of file creation.
-            edit_date: date of last file modification.
-            size: size of file in bytes.
+            List of dicts, which contains info about each file. Keys:
+                name (str): name of file with .txt extension.
+                create_date (str): date of file creation.
+                edit_date (str): date of last file modification.
+                size (str): size of file in bytes.
 
         """
 
         data = []
         files = [f for f in os.listdir(self.path) if os.path.isfile('{}/{}'.format(self.path, f))]
+        files = list(filter(lambda f: len(f.split('.')) > 1 and f.split('.')[1] == extension, files))
 
         for f in files:
             full_filename = '{}/{}'.format(self.path, f)
@@ -122,7 +138,7 @@ class FileService:
                 'name': f,
                 'create_date': utils.convert_date(os.path.getctime(full_filename)),
                 'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
-                'size': os.path.getsize(full_filename),
+                'size': '{} bytes'.format(os.path.getsize(full_filename))
             })
 
         return data
@@ -139,8 +155,16 @@ class FileService:
             user_id (int): User Id.
 
         Returns:
-            Dict (key (str): value (str)), which contains name of created file. Keys:
-            name: name of file with .txt extension.
+            Dict, which contains name of created file. Keys:
+                name (str): name of file with .txt extension.
+                content (str): file content.
+                create_date (str): date of file creation.
+                size (int): size of file in bytes,
+                user_id (int): user Id.
+
+        Raises:
+            AssertionError: if user_id is not set,
+            ValueError: if security level is invalid.
 
         """
 
@@ -180,6 +204,9 @@ class FileService:
         Args:
             filename (str): Filename without .txt file extension.
 
+        Returns:
+            Str with filename with .txt file extension.
+
         Raises:
             AssertionError: if file does not exist.
 
@@ -200,24 +227,29 @@ class FileService:
 
 
 class FileServiceSigned(FileService):
+    """Singleton class with methods for working with file system and file signatures.
+
+    """
 
     def get_file_data(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
         """Get full info about file.
 
-        Args:
+       Args:
             filename (str): Filename without .txt file extension,
             user_id (int): User Id.
 
         Returns:
-            Dict (key (str): value (str)), which contains full info about file. Keys:
-            name: name of file with .txt extension.
-            content: file content.
-            create_date: date of file creation.
-            edit_date: date of last file modification.
-            size: size of file in bytes.
+            Dict, which contains full info about file. Keys:
+                name (str): name of file with .txt extension.
+                content (str): file content.
+                create_date (str): date of file creation.
+                edit_date (str): date of last file modification.
+                size (int): size of file in bytes,
+                user_id (int): user Id.
 
         Raises:
-            AssertionError: if file does not exist.
+            AssertionError: if file does not exist, security level is invalid, filename format is invalid, signatures
+            are not match, signature file does not exist.
 
         """
 
@@ -238,7 +270,7 @@ class FileServiceSigned(FileService):
 
     def create_file(
             self, content: str = None, security_level: str = None, user_id: int = None) -> typing.Dict[str, str]:
-        """Create new .txt file.
+        """Create new .txt file with signature file.
 
         Method generates name of file from random string with digits and latin letters.
 
@@ -248,8 +280,16 @@ class FileServiceSigned(FileService):
             user_id (int): User Id.
 
         Returns:
-            Dict (key (str): value (str)), which contains name of created file. Keys:
-            name: name of file with .txt extension.
+            Dict, which contains name of created file. Keys:
+                name (str): name of file with .txt extension.
+                content (str): file content.
+                create_date (str): date of file creation.
+                size (int): size of file in bytes,
+                user_id (int): user Id.
+
+        Raises:
+            AssertionError: if user_id is not set,
+            ValueError: if security level is invalid.
 
         """
 

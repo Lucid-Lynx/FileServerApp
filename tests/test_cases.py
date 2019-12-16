@@ -843,13 +843,13 @@ class TestSuite:
         logging.info('Test request. Invalid password')
         resp = await client.post('/signin', json={'email': test_email, 'password': 'test'})
         assert resp.status == 400
-        assert await resp.text() == 'Invalid login or password'
+        assert await resp.text() == 'Incorrect login or password'
         logging.info('Test is succeeded')
 
         logging.info('Test request. User does not exist')
         resp = await client.post('/signin', json={'email': 'user4@test.su', 'password': 'test'})
         assert resp.status == 400
-        assert await resp.text() == 'Invalid login or password'
+        assert await resp.text() == 'Incorrect login or password'
         logging.info('Test is succeeded')
 
     async def test_logout(self, client, prepare_data):

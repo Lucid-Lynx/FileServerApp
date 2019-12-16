@@ -67,6 +67,9 @@ class Handler:
         Returns:
             Response: JSON response with success status and data or error status and error message.
 
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
+
         """
 
         filename = request.match_info['filename']
@@ -74,6 +77,7 @@ class Handler:
         try:
             result = self.file_service.get_file_data(filename, kwargs.get('user_id'))
             result.pop('user_id')
+            result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
                 'status': 'success',
@@ -96,6 +100,9 @@ class Handler:
         Returns:
             Response: JSON response with success status and data or error status and error message.
 
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
+
         """
 
         filename = request.match_info['filename']
@@ -103,6 +110,7 @@ class Handler:
         try:
             result = self.file_service_signed.get_file_data(filename, kwargs.get('user_id'))
             result.pop('user_id')
+            result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
                 'status': 'success',
@@ -122,12 +130,16 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "content": "content string. Optional",
-                "security_level": "security level. Optional. Default: low"
+                "content": "string. Content string. Optional",
+                "security_level": "string. Security level. Optional. Default: low",
+                "is_signed": "boolean. Sign or not created file. Optional. Default: false"
             }.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -150,6 +162,7 @@ class Handler:
 
             result = file_service.create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
             result.pop('user_id')
+            result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
                 'status': 'success',
@@ -172,6 +185,9 @@ class Handler:
         Returns:
             Response: JSON response with success status and success message or error status and error message.
 
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
+
         """
 
         filename = request.match_info['filename']
@@ -191,15 +207,18 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "name": "string. Required"
-                "surname": "string. Optional"
-                "email": "string. Required",
+                "name": "string. User's first name. Required"
+                "surname": "string. User's last name. Optional"
+                "email": "string. User's email. Required",
                 "password": "string. Required letters and numbers. Quantity of symbols > 8 and < 50. Required",
                 "confirm_password": "string. Must match with password. Required"
             }.
 
         Returns:
             Response: JSON response with success status or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -228,12 +247,16 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "email": "string. Required",
-                "password": "string. Required",
+                "email": "string. User's email. Required",
+                "password": "string. User's password. Required",
             }.
 
         Returns:
-            Response: JSON response with success status or error status and error message.
+            Response: JSON response with success status, success message user's session UUID or error status and error
+            message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -263,7 +286,10 @@ class Handler:
             request (Request): aiohttp request, contains session_id.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPUnauthorized: 401 HTTP error, if user session is expired or not found.
 
         """
 
@@ -291,7 +317,10 @@ class Handler:
             request (Request): aiohttp request, contains method name.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -318,7 +347,10 @@ class Handler:
             request (Request): aiohttp request, contains method name.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -345,7 +377,10 @@ class Handler:
             request (Request): aiohttp request, contains role name.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -372,7 +407,10 @@ class Handler:
             request (Request): aiohttp request, contains role name.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -398,12 +436,15 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "method": "string. Required",
-                "role": "string. Required",
+                "method": "string. Method name. Required",
+                "role": "string. Role name. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -435,12 +476,15 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "method": "string. Required",
-                "role": "string. Required",
+                "method": "string. Method name. Required",
+                "role": "string. Role name. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -473,12 +517,15 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "method": "string. Required",
-                "value": "boolean. Required",
+                "method": "string. Method name. Required",
+                "value": "boolean. Value of shared property. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -511,12 +558,15 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "email": "string. Required",
-                "role": "string. Required",
+                "email": "string. User's email. Required",
+                "role": "string. Role name. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -549,11 +599,14 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "path": "string. Required",
+                "path": "string. Directory path. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
