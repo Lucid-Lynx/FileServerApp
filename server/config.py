@@ -1,3 +1,6 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 import os
 
 os.environ['DB_NAME'] = 'FileServer'

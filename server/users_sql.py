@@ -1,3 +1,6 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 import re
 import os
 import psycopg2

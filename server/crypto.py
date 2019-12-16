@@ -1,3 +1,6 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 import os
 import hashlib
 from Crypto.PublicKey import RSA

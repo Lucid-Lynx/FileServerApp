@@ -1,3 +1,6 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 from aiohttp import web
 from server.database import DataBase
 
