@@ -6,22 +6,19 @@ from sqlalchemy.orm import relationship, sessionmaker
 from datetime import datetime, timedelta
 from uuid import uuid4
 from server.crypto import HashAPI
+from server.utils import SingletonMeta
 
 
-class DataBase:
+class DataBase(metaclass=SingletonMeta):
 
     __is_inited = False
+    __instance = None
     __db_string = "postgres://{}:{}@{}/{}".format(
         os.environ['DB_USER'],
         os.environ['DB_PASSWORD'],
         os.environ['DB_HOST'],
         os.environ['DB_NAME'])
     Base = declarative_base()
-
-    def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, '__instance'):
-            cls.__instance = super(DataBase, cls).__new__(cls)
-        return cls.__instance
 
     def __init__(self):
         if not self.__is_inited:
