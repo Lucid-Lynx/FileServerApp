@@ -1,3 +1,6 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 import os
 from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey

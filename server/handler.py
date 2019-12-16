@@ -1,3 +1,6 @@
+# Copyright 2019 by Kirill Kanin.
+# All rights reserved.
+
 import json
 from aiohttp import web
 from server.file_service import FileService, FileServiceSigned
