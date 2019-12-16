@@ -4,6 +4,7 @@
 import argparse
 import os
 import sys
+import logging
 from aiohttp import web
 from server.handler import Handler
 from server.database import DataBase
@@ -54,6 +55,7 @@ def main():
         web.get('/files/{filename}/signed', handler.get_file_info_signed),
         web.post('/files', handler.create_file),
         web.delete('/files/{filename}', handler.delete_file),
+        web.get('/files/download/test', handler.download_file),
         web.post('/signup', handler.signup),
         web.post('/signin', handler.signin),
         web.get('/logout', handler.logout),
@@ -67,6 +69,7 @@ def main():
         web.post('/change_user_role', handler.change_user_role),
         web.post('/change_file_dir', handler.change_file_dir),
     ])
+    logging.basicConfig(level=logging.INFO)
     web.run_app(app, port=namespace.port)
 
 

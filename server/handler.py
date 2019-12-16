@@ -3,7 +3,10 @@
 
 import json
 from aiohttp import web
+from queue import Queue
+from distutils.util import strtobool
 from server.file_service import FileService, FileServiceSigned
+from server.file_loader import FileLoader
 from server.users import UsersAPI
 from server.role_model import RoleModel
 from server.users_sql import UsersSQLAPI
@@ -16,8 +19,9 @@ class Handler:
     """
 
     def __init__(self, path):
-        self.file_service = FileService(path)
-        self.file_service_signed = FileServiceSigned(path)
+        self.file_service = FileService(path=path)
+        self.file_service_signed = FileServiceSigned(path=path)
+        self.queue = Queue()
 
     async def handle(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Basic coroutine for connection testing.
@@ -151,6 +155,7 @@ class Handler:
             result += line.decode('utf-8')
 
         try:
+            print(1)
             data = json.loads(result)
             is_signed = data.get('is_signed', False)
             assert isinstance(is_signed, bool), 'Is_signed should be boolean'
@@ -200,6 +205,49 @@ class Handler:
 
         except AssertionError as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
+    async def download_file(self, request: web.Request, *args, **kwargs) -> web.Response:
+        """Coroutine for downloading files from working directory.
+
+        Args:
+            request (Request): aiohttp request, contains filename and is_signed parameters.
+
+        Returns:
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
+
+        """
+
+        try:
+            filename = request.rel_url.query['filename']
+            is_signed = request.rel_url.query['is_signed']
+            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+            is_signed = strtobool(is_signed)
+            print(2)
+
+            thread = FileLoader(filename, kwargs.get('user_id'), is_signed)
+            thread.start()
+
+            while thread.state not in ['finished', 'error']:
+                if thread.state == 'finished':
+                    return web.json_response(data={
+                        'status': 'success',
+                        'data': thread.message,
+                    })
+                elif thread.state == 'error':
+                    raise AssertionError(thread.message)
+
+        except AssertionError as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
+
+        except KeyError as err:
+            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
 
     async def signup(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing up user.

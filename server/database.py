@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy.orm.session import Session
+from sqlalchemy.orm.session import Session as DBSession
 from sqlalchemy.engine.base import Engine
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -155,7 +155,7 @@ class DataBase(metaclass=SingletonMeta):
 
         return self.__engine
 
-    def create_session(self) -> Session:
+    def create_session(self) -> DBSession:
         """Create and get database connection session.
 
         Returns:

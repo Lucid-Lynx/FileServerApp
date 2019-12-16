@@ -7,8 +7,6 @@ import server.utils as utils
 from collections import OrderedDict
 from server.crypto import BaseCipher, AESCipher, RSACipher, HashAPI
 
-extension = 'txt'
-
 
 class FileService:
     """Singleton class with methods for working with file system.
@@ -17,17 +15,22 @@ class FileService:
 
     __is_inited = False
     __instance = None
+    extension = 'txt'
 
     def __new__(cls, *args, **kwargs):
         if not isinstance(cls.__instance, cls):
             cls.__instance = super(FileService, cls).__new__(cls)
         return cls.__instance
 
-    def __init__(self, path: str):
+    def __init__(self, *args, **kwargs):
         if not self.__is_inited:
-            if not os.path.exists(path):
-                os.mkdir(path)
-            self.__path = path
+            path = kwargs.get('path')
+
+            if path:
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                self.__path = path
+
             self.__is_inited = True
 
     @property
@@ -90,7 +93,9 @@ class FileService:
 
         """
 
-        short_filename = '{}.{}'.format(filename, extension)
+        assert user_id, 'User Id is not set'
+
+        short_filename = '{}.{}'.format(filename, self.extension)
         full_filename = '{}/{}'.format(self.path, short_filename)
         assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
 
@@ -130,7 +135,7 @@ class FileService:
 
         data = []
         files = [f for f in os.listdir(self.path) if os.path.isfile('{}/{}'.format(self.path, f))]
-        files = list(filter(lambda f: len(f.split('.')) > 1 and f.split('.')[1] == extension, files))
+        files = list(filter(lambda f: len(f.split('.')) > 1 and f.split('.')[1] == self.extension, files))
 
         for f in files:
             full_filename = '{}/{}'.format(self.path, f)
@@ -170,11 +175,11 @@ class FileService:
 
         assert user_id, 'User Id is not set'
 
-        filename = '{}_{}.{}'.format(utils.generate_string(), security_level, extension)
+        filename = '{}_{}.{}'.format(utils.generate_string(), security_level, self.extension)
         full_filename = '{}/{}'.format(self.path, filename)
 
         while os.path.exists(full_filename):
-            filename = '{}_{}.{}'.format(utils.generate_string(), security_level, extension)
+            filename = '{}_{}.{}'.format(utils.generate_string(), security_level, self.extension)
             full_filename = '{}/{}'.format(self.path, filename)
 
         if not security_level or security_level == 'low':
@@ -212,7 +217,7 @@ class FileService:
 
         """
 
-        short_filename = '{}.{}'.format(filename, extension)
+        short_filename = '{}.{}'.format(filename, self.extension)
         signature_file = '{}.{}'.format(filename, 'md5')
         full_filename = "{}/{}".format(self.path, short_filename)
         full_signature_file = "{}/{}".format(self.path, signature_file)
