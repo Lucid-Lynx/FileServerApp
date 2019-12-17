@@ -66,7 +66,7 @@ class Handler:
         """Coroutine for getting full info about file in working directory.
 
         Args:
-            request (Request): aiohttp request, contains filename.
+            request (Request): aiohttp request, contains filename and is_signed parameters.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.
@@ -76,10 +76,18 @@ class Handler:
 
         """
 
-        filename = request.match_info['filename']
-
         try:
-            result = self.file_service.get_file_data(filename, kwargs.get('user_id'))
+            filename = request.rel_url.query['filename']
+            is_signed = request.rel_url.query['is_signed']
+            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+            is_signed = strtobool(is_signed)
+
+            if is_signed:
+                file_service = self.file_service_signed
+            else:
+                file_service = self.file_service
+
+            result = file_service.get_file_data(filename, kwargs.get('user_id'))
             result.pop('user_id')
             result['size'] = '{} bytes'.format(result['size'])
 
@@ -91,38 +99,8 @@ class Handler:
         except (AssertionError, ValueError) as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
-    @UsersAPI.authorized
-    @RoleModel.role_model
-    # @UsersSQLAPI.authorized
-    # @RoleModelSQL.role_model
-    async def get_file_info_signed(self, request: web.Request, *args, **kwargs) -> web.Response:
-        """Coroutine for getting full info about file in working directory with checking it's signature.
-
-        Args:
-            request (Request): aiohttp request, contains filename.
-
-        Returns:
-            Response: JSON response with success status and data or error status and error message.
-
-        Raises:
-            HTTPBadRequest: 400 HTTP error, if error.
-
-        """
-
-        filename = request.match_info['filename']
-
-        try:
-            result = self.file_service_signed.get_file_data(filename, kwargs.get('user_id'))
-            result.pop('user_id')
-            result['size'] = '{} bytes'.format(result['size'])
-
-            return web.json_response(data={
-                'status': 'success',
-                'data': result,
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except KeyError as err:
+            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -155,7 +133,6 @@ class Handler:
             result += line.decode('utf-8')
 
         try:
-            print(1)
             data = json.loads(result)
             is_signed = data.get('is_signed', False)
             assert isinstance(is_signed, bool), 'Is_signed should be boolean'
@@ -229,7 +206,6 @@ class Handler:
             is_signed = request.rel_url.query['is_signed']
             assert is_signed in ['true', 'false'], 'Is_signed is invalid'
             is_signed = strtobool(is_signed)
-            print(2)
 
             thread = FileLoader(filename, kwargs.get('user_id'), is_signed)
             thread.start()

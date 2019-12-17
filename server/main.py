@@ -50,12 +50,11 @@ def main():
     app = web.Application()
     app.add_routes([
         web.get('/', handler.handle),
-        web.get('/files', handler.get_files),
-        web.get('/files/{filename}', handler.get_file_info),
-        web.get('/files/{filename}/signed', handler.get_file_info_signed),
+        web.get('/files/list', handler.get_files),
+        web.get('/files', handler.get_file_info),
         web.post('/files', handler.create_file),
         web.delete('/files/{filename}', handler.delete_file),
-        web.get('/files/download/test', handler.download_file),
+        web.get('/files/download', handler.download_file),
         web.post('/signup', handler.signup),
         web.post('/signin', handler.signin),
         web.get('/logout', handler.logout),

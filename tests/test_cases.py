@@ -72,9 +72,8 @@ def client(loop, aiohttp_client):
     handler = Handler(test_folder)
     app = web.Application()
     app.router.add_get('/', handler.handle)
-    app.router.add_get('/files', handler.get_files)
-    app.router.add_get('/files/{filename}', handler.get_file_info)
-    app.router.add_get('/files/{filename}/signed', handler.get_file_info_signed)
+    app.router.add_get('/files/list', handler.get_files)
+    app.router.add_get('/files', handler.get_file_info)
     app.router.add_post('/files', handler.create_file)
     app.router.add_delete('/files/{filename}', handler.delete_file)
     app.router.add_post('/signup', handler.signup)
@@ -249,36 +248,36 @@ class TestSuite:
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
 
         logger.info('Test request. Method not allowed')
-        resp = await client.put('/files')
+        resp = await client.put('/files/list')
         assert resp.status == 405
         logger.info('Test is succeeded')
 
         logger.info('Test request. User is not logged in')
-        resp = await client.get('/files')
+        resp = await client.get('/files/list')
         assert resp.status == 401
         assert await resp.text() == 'Unauthorized request'
         logger.info('Test is succeeded')
 
         logger.info('Test request. Session expired')
-        resp = await client.get('/files', headers={'Authorization': 'test'})
+        resp = await client.get('/files/list', headers={'Authorization': 'test'})
         assert resp.status == 401
         assert await resp.text() == 'Session expired. Please, sign in again'
         logger.info('Test is succeeded')
 
         logger.info('Test request. Access denied')
-        resp = await client.get('/files', headers={'Authorization': session_denied.uuid})
+        resp = await client.get('/files/list', headers={'Authorization': session_denied.uuid})
         assert resp.status == 403
         assert await resp.text() == 'Access denied'
         logger.info('Test is succeeded')
 
         logger.info('Test request. User without role')
-        resp = await client.get('/files', headers={'Authorization': session_no_role.uuid})
+        resp = await client.get('/files/list', headers={'Authorization': session_no_role.uuid})
         assert resp.status == 403
         assert await resp.text() == 'User is not attached to role'
         logger.info('Test is succeeded')
 
         logger.info('Test request. Access allowed')
-        resp = await client.get('/files', headers={'Authorization': session_allowed.uuid})
+        resp = await client.get('/files/list', headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
@@ -301,52 +300,85 @@ class TestSuite:
     async def test_get_file_info(self, client, prepare_data):
         client, handler = tuple(client)
         session_denied, session_allowed, session_no_role = tuple(prepare_data)
-        test_file_part = test_file_1.split('.')[0]
+        test_file_part = test_file_4.split('.')[0]
 
         logger.info('Test request. Method not allowed')
-        resp = await client.put('/files/{}'.format(test_file_part))
+        resp = await client.put('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
         assert resp.status == 405
         logger.info('Test is succeeded')
 
         logger.info('Test request. User is not logged in')
-        resp = await client.get('/files/{}'.format(test_file_part))
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
         assert resp.status == 401
         assert await resp.text() == 'Unauthorized request'
         logger.info('Test is succeeded')
 
         logger.info('Test request. Session expired')
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': 'test'})
+        resp = await client.get(
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'), headers={'Authorization': 'test'})
         assert resp.status == 401
         assert await resp.text() == 'Session expired. Please, sign in again'
         logger.info('Test is succeeded')
 
         logger.info('Test request. Access denied')
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_denied.uuid})
+        resp = await client.get(
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'),
+            headers={'Authorization': session_denied.uuid})
         assert resp.status == 403
         assert await resp.text() == 'Access denied'
         logger.info('Test is succeeded')
 
         logger.info('Test request. User without role')
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_no_role.uuid})
+        resp = await client.get(
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'),
+            headers={'Authorization': session_no_role.uuid})
         assert resp.status == 403
         assert await resp.text() == 'User is not attached to role'
         logger.info('Test is succeeded')
 
+        logger.info('Test request. File name is not set')
+        resp = await client.get(
+            '/files?is_signed={}'.format(False),
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Parameter \'filename\' is not set'
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. Is_signed is not set')
+        resp = await client.get(
+            '/files?filename={}'.format(test_file_part),
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Parameter \'is_signed\' is not set'
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. Is_signed is invalid')
+        resp = await client.get(
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'test'),
+            headers={'Authorization': session_allowed.uuid})
+        assert resp.status == 400
+        assert await resp.text() == 'Is_signed is invalid'
+        logger.info('Test is succeeded')
+
         logger.info('Test request. Access allowed. File exists. Security level is low')
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        resp = await client.get(
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
         filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
-        assert filename == test_file_1
+        assert filename == test_file_4
         content = result.get('data').get('content')
         assert content == test_content
         logger.info('Test is succeeded')
 
         logger.info('Test request. Access allowed. File exists. Security level is high')
         test_file_part = test_file_5.split('.')[0]
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        resp = await client.get(
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
@@ -359,7 +391,9 @@ class TestSuite:
 
         logger.info('Test request. Access allowed. File exists. Security level is medium')
         test_file_part = test_file_6.split('.')[0]
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+        resp = await client.get(
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
@@ -370,67 +404,11 @@ class TestSuite:
         assert content == test_content
         logger.info('Test is succeeded')
 
-        logger.info('Test request. Access allowed. Security level is invalid')
-        test_file_part = test_file_2.split('.')[0]
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
-        assert resp.status == 400
-        assert await resp.text() == 'Security level is invalid'
-        logger.info('Test is succeeded')
-
-        logger.info('Test request. Access allowed. File name is invalid')
-        test_file_part = test_file_3.split('.')[0]
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
-        assert resp.status == 400
-        assert await resp.text() == 'Invalid format of file name'
-        logger.info('Test is succeeded')
-
-        logger.info('Test request. Access allowed. File does not exist')
-        test_file_part = test_file_8.split('.')[0]
-        resp = await client.get('/files/{}'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
-        assert resp.status == 400
-        assert await resp.text() == 'File {} does not exist'.format(test_file_8)
-        assert not os.path.exists('{}/{}'.format(test_folder, test_file_8))
-        logger.info('Test is succeeded')
-
-    async def test_get_file_info_signed(self, client, prepare_data):
-        client, handler = tuple(client)
-        session_denied, session_allowed, session_no_role = tuple(prepare_data)
-        test_file_part = test_file_4.split('.')[0]
-
-        logger.info('Test request. Method not allowed')
-        resp = await client.put('/files/{}/signed'.format(test_file_part))
-        assert resp.status == 405
-        logger.info('Test is succeeded')
-
-        logger.info('Test request. User is not logged in')
-        resp = await client.get('/files/{}/signed'.format(test_file_part))
-        assert resp.status == 401
-        assert await resp.text() == 'Unauthorized request'
-        logger.info('Test is succeeded')
-
-        logger.info('Test request. Session expired')
-        resp = await client.get('/files/{}/signed'.format(test_file_part), headers={'Authorization': 'test'})
-        assert resp.status == 401
-        assert await resp.text() == 'Session expired. Please, sign in again'
-        logger.info('Test is succeeded')
-
-        logger.info('Test request. Access denied')
-        resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_denied.uuid})
-        assert resp.status == 403
-        assert await resp.text() == 'Access denied'
-        logger.info('Test is succeeded')
-
-        logger.info('Test request. User without role')
-        resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_no_role.uuid})
-        assert resp.status == 403
-        assert await resp.text() == 'User is not attached to role'
-        logger.info('Test is succeeded')
-
         logger.info('Test request. Access allowed. File exists. Security level is low. Signatures are match')
+        test_file_part = test_file_4.split('.')[0]
         resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'true'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
@@ -444,7 +422,8 @@ class TestSuite:
         logger.info('Test request. Access allowed. File exists. Security level is high. Signatures are match')
         test_file_part = test_file_5.split('.')[0]
         resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'true'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
@@ -458,7 +437,8 @@ class TestSuite:
         logger.info('Test request. Access allowed. File exists. Security level is medium. Signatures are match')
         test_file_part = test_file_6.split('.')[0]
         resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'true'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
@@ -472,7 +452,8 @@ class TestSuite:
         logger.info('Test request. Access allowed. Security level is invalid')
         test_file_part = test_file_2.split('.')[0]
         resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Security level is invalid'
         logger.info('Test is succeeded')
@@ -480,7 +461,8 @@ class TestSuite:
         logger.info('Test request. Access allowed. File name is invalid')
         test_file_part = test_file_3.split('.')[0]
         resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Invalid format of file name'
         logger.info('Test is succeeded')
@@ -488,7 +470,8 @@ class TestSuite:
         logger.info('Test request. Access allowed. File does not exist')
         test_file_part = test_file_8.split('.')[0]
         resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'false'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'File {} does not exist'.format(test_file_8)
         assert not os.path.exists('{}/{}'.format(test_folder, test_file_8))
@@ -498,7 +481,8 @@ class TestSuite:
         test_file_part = test_file_1.split('.')[0]
         signature_file = '{}.{}'.format(test_file_part, 'md5')
         resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'true'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Signature file {} does not exist'.format(signature_file)
         logger.info('Test is succeeded')
@@ -506,7 +490,8 @@ class TestSuite:
         logger.info('Test request. Access allowed. Signatures are not match')
         test_file_part = test_file_7.split('.')[0]
         resp = await client.get(
-            '/files/{}/signed'.format(test_file_part), headers={'Authorization': session_allowed.uuid})
+            '/files?filename={}&is_signed={}'.format(test_file_part, 'true'),
+            headers={'Authorization': session_allowed.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Signatures are not match'
         logger.info('Test is succeeded')
