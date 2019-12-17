@@ -3,7 +3,10 @@
 
 import json
 from aiohttp import web
+from queue import Queue
+from distutils.util import strtobool
 from server.file_service import FileService, FileServiceSigned
+from server.file_loader import FileLoader, QueuedLoader
 from server.users import UsersAPI
 from server.role_model import RoleModel
 from server.users_sql import UsersSQLAPI
@@ -15,9 +18,14 @@ class Handler:
 
     """
 
-    def __init__(self, path):
-        self.file_service = FileService(path)
-        self.file_service_signed = FileServiceSigned(path)
+    def __init__(self, path: str):
+        self.file_service = FileService(path=path)
+        self.file_service_signed = FileServiceSigned(path=path)
+        self.queue = Queue()
+
+        for i in range(2):
+            thread = QueuedLoader(self.queue)
+            thread.start()
 
     async def handle(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Basic coroutine for connection testing.
@@ -62,18 +70,30 @@ class Handler:
         """Coroutine for getting full info about file in working directory.
 
         Args:
-            request (Request): aiohttp request, contains filename.
+            request (Request): aiohttp request, contains filename and is_signed parameters.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.
 
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
+
         """
 
-        filename = request.match_info['filename']
-
         try:
-            result = self.file_service.get_file_data(filename, kwargs.get('user_id'))
+            filename = request.rel_url.query['filename']
+            is_signed = request.rel_url.query['is_signed']
+            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+            is_signed = strtobool(is_signed)
+
+            if is_signed:
+                file_service = self.file_service_signed
+            else:
+                file_service = self.file_service
+
+            result = await file_service.get_file_data_async(filename, kwargs.get('user_id'))
             result.pop('user_id')
+            result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
                 'status': 'success',
@@ -83,34 +103,8 @@ class Handler:
         except (AssertionError, ValueError) as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
-    @UsersAPI.authorized
-    @RoleModel.role_model
-    # @UsersSQLAPI.authorized
-    # @RoleModelSQL.role_model
-    async def get_file_info_signed(self, request: web.Request, *args, **kwargs) -> web.Response:
-        """Coroutine for getting full info about file in working directory with checking it's signature.
-
-        Args:
-            request (Request): aiohttp request, contains filename.
-
-        Returns:
-            Response: JSON response with success status and data or error status and error message.
-
-        """
-
-        filename = request.match_info['filename']
-
-        try:
-            result = self.file_service_signed.get_file_data(filename, kwargs.get('user_id'))
-            result.pop('user_id')
-
-            return web.json_response(data={
-                'status': 'success',
-                'data': result,
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except KeyError as err:
+            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -122,12 +116,16 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "content": "content string. Optional",
-                "security_level": "security level. Optional. Default: low"
+                "content": "string. Content string. Optional",
+                "security_level": "string. Security level. Optional. Default: low",
+                "is_signed": "boolean. Sign or not created file. Optional. Default: false"
             }.
 
         Returns:
             Response: JSON response with success status and data or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -148,8 +146,10 @@ class Handler:
             else:
                 file_service = self.file_service
 
-            result = file_service.create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
+            result = \
+                await file_service.create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
             result.pop('user_id')
+            result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
                 'status': 'success',
@@ -172,6 +172,9 @@ class Handler:
         Returns:
             Response: JSON response with success status and success message or error status and error message.
 
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
+
         """
 
         filename = request.match_info['filename']
@@ -185,21 +188,105 @@ class Handler:
         except AssertionError as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
+    async def download_file(self, request: web.Request, *args, **kwargs) -> web.Response:
+        """Coroutine for downloading files from working directory via threads.
+
+        Args:
+            request (Request): aiohttp request, contains filename and is_signed parameters.
+
+        Returns:
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
+
+        """
+
+        try:
+            filename = request.rel_url.query['filename']
+            is_signed = request.rel_url.query['is_signed']
+            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+            is_signed = strtobool(is_signed)
+
+            thread = FileLoader(filename, kwargs.get('user_id'), is_signed)
+            thread.start()
+            thread.join()
+            assert thread.state == 'finished', thread.message
+
+            return web.json_response(data={
+                'status': 'success',
+                'message': thread.message,
+            })
+
+        except AssertionError as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
+
+        except KeyError as err:
+            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
+    # @UsersSQLAPI.authorized
+    # @RoleModelSQL.role_model
+    async def download_file_queued(self, request: web.Request, *args, **kwargs) -> web.Response:
+        """Coroutine for downloading files from working directory via queue.
+
+        Args:
+            request (Request): aiohttp request, contains filename and is_signed parameters.
+
+        Returns:
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
+
+        """
+
+        try:
+            filename = request.rel_url.query['filename']
+            is_signed = request.rel_url.query['is_signed']
+            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+            is_signed = strtobool(is_signed)
+            self.queue.put({
+                'filename': filename,
+                'is_signed': is_signed,
+                'user_id': kwargs.get('user_id'),
+            })
+
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'Request for downloading file {}.{} is successfully added into queue'.format(
+                    filename, self.file_service.extension),
+            })
+
+        except AssertionError as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
+
+        except KeyError as err:
+            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+
     async def signup(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing up user.
 
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "name": "string. Required"
-                "surname": "string. Optional"
-                "email": "string. Required",
+                "name": "string. User's first name. Required"
+                "surname": "string. User's last name. Optional"
+                "email": "string. User's email. Required",
                 "password": "string. Required letters and numbers. Quantity of symbols > 8 and < 50. Required",
                 "confirm_password": "string. Must match with password. Required"
             }.
 
         Returns:
             Response: JSON response with success status or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -228,12 +315,16 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "email": "string. Required",
-                "password": "string. Required",
+                "email": "string. User's email. Required",
+                "password": "string. User's password. Required",
             }.
 
         Returns:
-            Response: JSON response with success status or error status and error message.
+            Response: JSON response with success status, success message user's session UUID or error status and error
+            message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -263,7 +354,10 @@ class Handler:
             request (Request): aiohttp request, contains session_id.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPUnauthorized: 401 HTTP error, if user session is expired or not found.
 
         """
 
@@ -291,7 +385,10 @@ class Handler:
             request (Request): aiohttp request, contains method name.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -318,7 +415,10 @@ class Handler:
             request (Request): aiohttp request, contains method name.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -345,7 +445,10 @@ class Handler:
             request (Request): aiohttp request, contains role name.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -372,7 +475,10 @@ class Handler:
             request (Request): aiohttp request, contains role name.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -398,12 +504,15 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "method": "string. Required",
-                "role": "string. Required",
+                "method": "string. Method name. Required",
+                "role": "string. Role name. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -435,12 +544,15 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "method": "string. Required",
-                "role": "string. Required",
+                "method": "string. Method name. Required",
+                "role": "string. Role name. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -473,12 +585,15 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "method": "string. Required",
-                "value": "boolean. Required",
+                "method": "string. Method name. Required",
+                "value": "boolean. Value of shared property. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -511,12 +626,15 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "email": "string. Required",
-                "role": "string. Required",
+                "email": "string. User's email. Required",
+                "role": "string. Role name. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 
@@ -549,11 +667,14 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "path": "string. Required",
+                "path": "string. Directory path. Required",
             }.
 
         Returns:
-            Response: JSON response with success status.
+            Response: JSON response with success status and success message or error status and error message.
+
+        Raises:
+            HTTPBadRequest: 400 HTTP error, if error.
 
         """
 

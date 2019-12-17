@@ -17,11 +17,38 @@ conn_params = {
 
 
 class RoleModelSQL:
+    """Class with static methods for working with role model via SQL.
+
+    """
 
     @staticmethod
     def role_model(func):
+        """Decorator for checking access permissions in role model.
+
+        Args:
+            func (function): Method for decoration.
+
+        Returns:
+            Function, which wrap method for decoration.
+
+        """
 
         def wrapper(*args, **kwargs) -> web.Response:
+            """Wrap decorated method.
+
+            Args:
+                *args (tuple): Tuple with nameless arguments,
+                **kwargs (dict): Dict with named arguments.
+
+            Returns:
+                Result of called wrapped method.
+
+            Raises:
+                HTTPUnauthorized: 401 HTTP error, if user session is expired or not found,
+                HTTPForbidden: 403 HTTP error, if access denied.
+
+            """
+
             request = args[1]
             session_id = request.headers.get('Authorization')
 
