@@ -55,6 +55,7 @@ def main():
         web.post('/files', handler.create_file),
         web.delete('/files/{filename}', handler.delete_file),
         web.get('/files/download', handler.download_file),
+        web.get('/files/download/queued', handler.download_file_queued),
         web.post('/signup', handler.signup),
         web.post('/signin', handler.signin),
         web.get('/logout', handler.logout),

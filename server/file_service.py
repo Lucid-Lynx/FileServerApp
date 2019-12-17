@@ -89,7 +89,58 @@ class FileService:
                 user_id (int): user Id.
 
         Raises:
-            AssertionError: if file does not exist, security level is invalid, filename format is invalid.
+            AssertionError: if file does not exist, filename format is invalid,
+            ValueError: if security level is invalid.
+
+        """
+
+        assert user_id, 'User Id is not set'
+
+        short_filename = '{}.{}'.format(filename, self.extension)
+        full_filename = '{}/{}'.format(self.path, short_filename)
+        assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
+
+        filename_parts = filename.split('_')
+        assert len(filename_parts) == 2, 'Invalid format of file name'
+        security_level = filename_parts[1]
+
+        if not security_level or security_level == 'low':
+            cipher = BaseCipher()
+        elif security_level == 'medium':
+            cipher = AESCipher(user_id)
+        elif security_level == 'high':
+            cipher = RSACipher(user_id)
+        else:
+            raise ValueError('Security level is invalid')
+
+        with open(full_filename, 'rb') as file_handler:
+            return OrderedDict(
+                name=short_filename,
+                create_date=utils.convert_date(os.path.getctime(full_filename)),
+                edit_date=utils.convert_date(os.path.getmtime(full_filename)),
+                size=os.path.getsize(full_filename),
+                content=cipher.decrypt(file_handler).decode('utf-8'),
+                user_id=user_id)
+
+    async def get_file_data_async(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
+        """Get full info about file. Asynchronous version.
+
+        Args:
+            filename (str): Filename without .txt file extension,
+            user_id (int): User Id.
+
+        Returns:
+            Dict, which contains full info about file. Keys:
+                name (str): name of file with .txt extension.
+                content (str): file content.
+                create_date (str): date of file creation.
+                edit_date (str): date of last file modification.
+                size (int): size of file in bytes,
+                user_id (int): user Id.
+
+        Raises:
+            AssertionError: if file does not exist, filename format is invalid,
+            ValueError: if security level is invalid.
 
         """
 
@@ -148,7 +199,7 @@ class FileService:
 
         return data
 
-    def create_file(
+    async def create_file(
             self, content: str = None, security_level: str = None, user_id: int = None) -> typing.Dict[str, str]:
         """Create new .txt file.
 
@@ -253,8 +304,9 @@ class FileServiceSigned(FileService):
                 user_id (int): user Id.
 
         Raises:
-            AssertionError: if file does not exist, security level is invalid, filename format is invalid, signatures
-            are not match, signature file does not exist.
+            AssertionError: if file does not exist, filename format is invalid, signatures are not match,
+            signature file does not exist,
+            ValueError: if security level is invalid.
 
         """
 
@@ -273,7 +325,45 @@ class FileServiceSigned(FileService):
 
         return result
 
-    def create_file(
+    async def get_file_data_async(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
+        """Get full info about file. Asynchronous version.
+
+       Args:
+            filename (str): Filename without .txt file extension,
+            user_id (int): User Id.
+
+        Returns:
+            Dict, which contains full info about file. Keys:
+                name (str): name of file with .txt extension.
+                content (str): file content.
+                create_date (str): date of file creation.
+                edit_date (str): date of last file modification.
+                size (int): size of file in bytes,
+                user_id (int): user Id.
+
+        Raises:
+            AssertionError: if file does not exist, filename format is invalid, signatures are not match,
+            signature file does not exist,
+            ValueError: if security level is invalid.
+
+        """
+
+        result = await super().get_file_data_async(filename, user_id)
+        result_for_check = result
+        result_for_check.pop('edit_date')
+
+        short_filename = '{}.{}'.format(filename, 'md5')
+        full_filename = '{}/{}'.format(self.path, short_filename)
+        assert os.path.exists(full_filename), 'Signature file {} does not exist'.format(short_filename)
+
+        signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result_for_check.values()))))
+
+        with open(full_filename, 'rb') as file_handler:
+            assert file_handler.read() == bytes(signature, 'utf-8'), 'Signatures are not match'
+
+        return result
+
+    async def create_file(
             self, content: str = None, security_level: str = None, user_id: int = None) -> typing.Dict[str, str]:
         """Create new .txt file with signature file.
 
@@ -298,7 +388,7 @@ class FileServiceSigned(FileService):
 
         """
 
-        result = super().create_file(content, security_level, user_id)
+        result = await super().create_file(content, security_level, user_id)
         signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result.values()))))
         filename = '{}.{}'.format(result['name'].split('.')[0], 'md5')
         full_filename = '{}/{}'.format(self.path, filename)
