@@ -17,6 +17,7 @@ setup(
         'aiohttp==3.6.0',
         'cchardet==2.1.4',
         'aiodns==2.0.0',
+        'pycryptodome==3.9.4',
         'pytest==5.3.1',
         'pytest-aiohttp==0.3.0',
         'psycopg2==2.8.4',
