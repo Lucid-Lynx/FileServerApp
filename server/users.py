@@ -13,11 +13,37 @@ PASSWORD_REGEX = re.compile(r'^\w{8,50}$')
 
 
 class UsersAPI:
+    """Class with static methods for working with users via ORM.
+
+    """
 
     @staticmethod
     def authorized(func):
+        """Decorator for checking user authorization.
+
+        Args:
+            func (function): Method for decoration.
+
+        Returns:
+            Function, which wrap method for decoration.
+
+        """
 
         def wrapper(*args, **kwargs) -> web.Response:
+            """Wrap decorated method.
+
+            Args:
+                *args (tuple): Tuple with nameless arguments,
+                **kwargs (dict): Dict with named arguments.
+
+            Returns:
+                Result of called wrapped method.
+
+            Raises:
+                HTTPUnauthorized: 401 HTTP error, if user session is expired or not found.
+
+            """
+
             request = args[1]
             session_id = request.headers.get('Authorization')
 
@@ -44,6 +70,23 @@ class UsersAPI:
 
     @staticmethod
     def signup(**kwargs):
+        """Sign up new user.
+
+        Args:
+            **kwargs (dict): Dict with named arguments. Keys:
+                email (str): user's email. Required.
+                password (str): user's password. Required letters and numbers. Quantity of symbols > 8 and < 50.
+                Required.
+                confirm_password (str): password confirmation. Must match with password. Required.
+                name (str): user's first name. Required.
+                surname (str): user's last name. Optional. Required.
+
+        Raises:
+            AssertionError: if at least one of required parameters in kwargs is not set, user with set email exists,
+            email or password format is invalid, passwords are not match.
+
+        """
+
         email = kwargs.get('email')
         password = kwargs.get('password')
         confirm_password = kwargs.get('confirm_password')
@@ -74,6 +117,22 @@ class UsersAPI:
 
     @staticmethod
     def signin(**kwargs) -> str:
+        """Sign in user.
+
+        Args:
+            **kwargs (dict): Dict with named arguments. Keys:
+                email (str): user's email. Required.
+                password (str): user's password. Required.
+
+        Returns:
+            Str with session UUID.
+
+        Raises:
+            AssertionError: if at least one of required parameters in kwargs is not set, user does not exist,
+            email format is invalid, incorrect password.
+
+        """
+
         email = kwargs.get('email')
         password = kwargs.get('password')
 
@@ -86,7 +145,7 @@ class UsersAPI:
         db = DataBase()
         db_session = db.create_session()
         user = db_session.query(db.User).filter_by(email=email).first()
-        assert user and hashed_password == user.password, 'Invalid login or password'.format(email)
+        assert user and hashed_password == user.password, 'Incorrect login or password'.format(email)
         user_session = db.Session(user)
         db_session.add(user_session)
         user.last_login_dt = datetime.now()
@@ -96,6 +155,13 @@ class UsersAPI:
 
     @staticmethod
     def logout(session_id: str):
+        """Logout user.
+
+        Args:
+            session_id (str): session UUID.
+
+        """
+
         db = DataBase()
         db_session = db.create_session()
         db_session.query(db.Session).filter_by(uuid=session_id).delete()
