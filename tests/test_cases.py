@@ -75,9 +75,9 @@ def client(loop, aiohttp_client):
     app.router.add_get('/files/list', handler.get_files)
     app.router.add_get('/files', handler.get_file_info)
     app.router.add_post('/files', handler.create_file)
-    app.router.add_delete('/files/{filename}', handler.delete_file),
-    app.router.add_get('/files/download', handler.download_file),
-    app.router.add_get('/files/download/queued', handler.download_file_queued),
+    app.router.add_delete('/files/{filename}', handler.delete_file)
+    app.router.add_get('/files/download', handler.download_file)
+    app.router.add_get('/files/download/queued', handler.download_file_queued)
     app.router.add_post('/signup', handler.signup)
     app.router.add_post('/signin', handler.signin)
     app.router.add_get('/logout', handler.logout)
