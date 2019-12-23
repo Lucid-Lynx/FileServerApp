@@ -290,7 +290,7 @@ class FileServiceSigned(FileService):
     def get_file_data(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
         """Get full info about file.
 
-       Args:
+        Args:
             filename (str): Filename without .txt file extension,
             user_id (int): User Id.
 
@@ -328,7 +328,7 @@ class FileServiceSigned(FileService):
     async def get_file_data_async(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
         """Get full info about file. Asynchronous version.
 
-       Args:
+        Args:
             filename (str): Filename without .txt file extension,
             user_id (int): User Id.
 
