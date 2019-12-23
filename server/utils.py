@@ -16,9 +16,7 @@ class SingletonMeta(type):
     __instance = None
 
     def __call__(cls):
-        if not isinstance(cls.__instance, cls):
-            cls.__instance = super().__call__()
-        return cls.__instance
+        pass
 
 
 def generate_string() -> str:
@@ -31,10 +29,7 @@ def generate_string() -> str:
 
     """
 
-    letters = string.ascii_letters
-    digits = string.digits
-
-    return ''.join(random.choice(letters + digits) for i in range(string_length))
+    pass
 
 
 def convert_date(timestamp: float) -> str:
@@ -50,4 +45,4 @@ def convert_date(timestamp: float) -> str:
 
     """
 
-    return datetime.fromtimestamp(timestamp).strftime("%Y.%m.%d %H:%M:%S")
+    pass

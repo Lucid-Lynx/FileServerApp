@@ -19,13 +19,7 @@ class Handler:
     """
 
     def __init__(self, path: str):
-        self.file_service = FileService(path=path)
-        self.file_service_signed = FileServiceSigned(path=path)
-        self.queue = Queue()
-
-        for i in range(2):
-            thread = QueuedLoader(self.queue)
-            thread.start()
+        pass
 
     async def handle(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Basic coroutine for connection testing.
@@ -38,9 +32,7 @@ class Handler:
 
         """
 
-        return web.json_response(data={
-            'status': 'success'
-        })
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -57,10 +49,7 @@ class Handler:
 
         """
 
-        return web.json_response(data={
-            'status': 'success',
-            'data': self.file_service.get_files(),
-        })
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -80,31 +69,7 @@ class Handler:
 
         """
 
-        try:
-            filename = request.rel_url.query['filename']
-            is_signed = request.rel_url.query['is_signed']
-            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
-            is_signed = strtobool(is_signed)
-
-            if is_signed:
-                file_service = self.file_service_signed
-            else:
-                file_service = self.file_service
-
-            result = await file_service.get_file_data_async(filename, kwargs.get('user_id'))
-            result.pop('user_id')
-            result['size'] = '{} bytes'.format(result['size'])
-
-            return web.json_response(data={
-                'status': 'success',
-                'data': result,
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
-
-        except KeyError as err:
-            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -129,35 +94,7 @@ class Handler:
 
         """
 
-        result = ''
-        stream = request.content
-
-        while not stream.at_eof():
-            line = await stream.read()
-            result += line.decode('utf-8')
-
-        try:
-            data = json.loads(result)
-            is_signed = data.get('is_signed', False)
-            assert isinstance(is_signed, bool), 'Is_signed should be boolean'
-
-            if is_signed:
-                file_service = self.file_service_signed
-            else:
-                file_service = self.file_service
-
-            result = \
-                await file_service.create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
-            result.pop('user_id')
-            result['size'] = '{} bytes'.format(result['size'])
-
-            return web.json_response(data={
-                'status': 'success',
-                'data': result,
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -177,16 +114,7 @@ class Handler:
 
         """
 
-        filename = request.match_info['filename']
-
-        try:
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'File {} is successfully deleted'.format(self.file_service.delete_file(filename)),
-            })
-
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -206,27 +134,7 @@ class Handler:
 
         """
 
-        try:
-            filename = request.rel_url.query['filename']
-            is_signed = request.rel_url.query['is_signed']
-            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
-            is_signed = strtobool(is_signed)
-
-            thread = FileLoader(filename, kwargs.get('user_id'), is_signed)
-            thread.start()
-            thread.join()
-            assert thread.state == 'finished', thread.message
-
-            return web.json_response(data={
-                'status': 'success',
-                'message': thread.message,
-            })
-
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
-
-        except KeyError as err:
-            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -246,28 +154,7 @@ class Handler:
 
         """
 
-        try:
-            filename = request.rel_url.query['filename']
-            is_signed = request.rel_url.query['is_signed']
-            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
-            is_signed = strtobool(is_signed)
-            self.queue.put({
-                'filename': filename,
-                'is_signed': is_signed,
-                'user_id': kwargs.get('user_id'),
-            })
-
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'Request for downloading file {}.{} is successfully added into queue'.format(
-                    filename, self.file_service.extension),
-            })
-
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
-
-        except KeyError as err:
-            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+        pass
 
     async def signup(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing up user.
@@ -290,24 +177,7 @@ class Handler:
 
         """
 
-        result = ''
-        stream = request.content
-
-        while not stream.at_eof():
-            line = await stream.read()
-            result += line.decode('utf-8')
-
-        try:
-            data = json.loads(result)
-            UsersAPI.signup(**data)
-            # UsersSQLAPI.signup(**data)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'User with email {} is successfully registered'.format(data.get('email')),
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     async def signin(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing in user.
@@ -328,24 +198,7 @@ class Handler:
 
         """
 
-        result = ''
-        stream = request.content
-
-        while not stream.at_eof():
-            line = await stream.read()
-            result += line.decode('utf-8')
-
-        try:
-            data = json.loads(result)
-            return web.json_response(data={
-                'status': 'success',
-                'session_id': UsersAPI.signin(**data),
-                # 'session_id': UsersSQLAPI.signin(**data),
-                'message': 'You successfully signed in system',
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     async def logout(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for logout.
@@ -361,18 +214,7 @@ class Handler:
 
         """
 
-        session_id = request.headers.get('Authorization')
-
-        if not session_id:
-            raise web.HTTPUnauthorized(text='Unauthorized request')
-
-        UsersAPI.logout(session_id)
-        # UsersSQLAPI.logout(session_id)
-
-        return web.json_response(data={
-            'status': 'success',
-            'message': 'You successfully logged out',
-        })
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -392,17 +234,7 @@ class Handler:
 
         """
 
-        method_name = request.match_info['method_name']
-
-        try:
-            RoleModel.add_method(method_name)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully added method {}'.format(method_name),
-            })
-
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -422,17 +254,7 @@ class Handler:
 
         """
 
-        method_name = request.match_info['method_name']
-
-        try:
-            RoleModel.delete_method(method_name)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully deleted method {}'.format(method_name),
-            })
-
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -452,17 +274,7 @@ class Handler:
 
         """
 
-        role_name = request.match_info['role_name']
-
-        try:
-            RoleModel.add_role(role_name)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully added role {}'.format(role_name),
-            })
-
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -482,17 +294,7 @@ class Handler:
 
         """
 
-        role_name = request.match_info['role_name']
-
-        try:
-            RoleModel.delete_role(role_name)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully deleted role {}'.format(role_name),
-            })
-
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -516,23 +318,7 @@ class Handler:
 
         """
 
-        result = ''
-        stream = request.content
-
-        while not stream.at_eof():
-            line = await stream.read()
-            result += line.decode('utf-8')
-
-        try:
-            data = json.loads(result)
-            RoleModel.add_method_to_role(**data)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully added method {} to role {}'.format(data.get('method'), data.get('role')),
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -556,24 +342,7 @@ class Handler:
 
         """
 
-        result = ''
-        stream = request.content
-
-        while not stream.at_eof():
-            line = await stream.read()
-            result += line.decode('utf-8')
-
-        try:
-            data = json.loads(result)
-            RoleModel.delete_method_from_role(**data)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully deleted method {} from role {}'.format(
-                    data.get('method'), data.get('role')),
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -597,24 +366,7 @@ class Handler:
 
         """
 
-        result = ''
-        stream = request.content
-
-        while not stream.at_eof():
-            line = await stream.read()
-            result += line.decode('utf-8')
-
-        try:
-            data = json.loads(result)
-            RoleModel.change_shared_prop(**data)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully changed shared property of method {}. Property is {}'.format(
-                    data.get('method'), 'enabled' if data.get('value') else 'disabled'),
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -638,24 +390,7 @@ class Handler:
 
         """
 
-        result = ''
-        stream = request.content
-
-        while not stream.at_eof():
-            line = await stream.read()
-            result += line.decode('utf-8')
-
-        try:
-            data = json.loads(result)
-            RoleModel.change_user_role(**data)
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully changed role of user with email {}. New role is {}'.format(
-                    data.get('email'), data.get('role')),
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -678,23 +413,4 @@ class Handler:
 
         """
 
-        result = ''
-        stream = request.content
-
-        while not stream.at_eof():
-            line = await stream.read()
-            result += line.decode('utf-8')
-
-        try:
-            data = json.loads(result)
-            path = data.get('path')
-            assert path, 'Directory path is not set'
-            self.file_service.path = path
-            self.file_service_signed.path = path
-            return web.json_response(data={
-                'status': 'success',
-                'message': 'You successfully changed working directory path. New path is {}'.format(data.get('path')),
-            })
-
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        pass

@@ -29,10 +29,7 @@ class DataBase(metaclass=SingletonMeta):
     Base = declarative_base()
 
     def __init__(self):
-        if not self.__is_inited:
-            self.__engine = create_engine(self.__db_string, pool_size=10, max_overflow=20)
-            self.Base.metadata.create_all(bind=self.__engine)
-            self.__is_inited = True
+        pass
 
     class BaseModel:
         """Base database model.
@@ -41,13 +38,13 @@ class DataBase(metaclass=SingletonMeta):
 
         @declared_attr
         def __tablename__(self):
-            return self.__name__
+            pass
 
         id = Column(Integer, name='Id', primary_key=True, autoincrement=True)
         create_dt = Column(DateTime, name='Create Date')
 
         def __init__(self):
-            self.create_dt = datetime.now()
+            pass
 
     class User(BaseModel, Base):
         """User model.
@@ -64,15 +61,7 @@ class DataBase(metaclass=SingletonMeta):
         sessions = relationship('Session', back_populates='user', cascade='all, delete-orphan')
 
         def __init__(self, email: str, password: str, name: str, surname: str = None, role=None, sessions: list = None):
-            super().__init__()
-            self.email = email
-            self.password = password
-            self.name = name
-            self.surname = surname
-            self.role = role
-
-            if sessions:
-                self.sessions.extend(sessions)
+            pass
 
     class Role(BaseModel, Base):
         """Role model.
@@ -84,15 +73,7 @@ class DataBase(metaclass=SingletonMeta):
         methods = relationship('MethodRole', back_populates='role')
 
         def __init__(self, name: str, users: list = None, methods: list = None):
-            super().__init__()
-            self.name = name
-
-            if users:
-                self.users.extend(users)
-
-            if methods:
-                method_role_list = map(lambda method: DataBase.MethodRole(method=method), methods)
-                self.methods.extend(method_role_list)
+            pass
 
     class Method(BaseModel, Base):
         """Method model.
@@ -104,13 +85,7 @@ class DataBase(metaclass=SingletonMeta):
         roles = relationship('MethodRole', back_populates='method')
 
         def __init__(self, name: str, shared: bool = False, roles: list = None):
-            super().__init__()
-            self.name = name
-            self.shared = shared
-
-            if roles:
-                method_role_list = list(map(lambda role: DataBase.MethodRole(role=role), roles))
-                self.roles.extend(method_role_list)
+            pass
 
     class Session(BaseModel, Base):
         """Session model.
@@ -123,10 +98,7 @@ class DataBase(metaclass=SingletonMeta):
         user = relationship('User', back_populates='sessions')
 
         def __init__(self, user=None):
-            super().__init__()
-            self.uuid = str(uuid4())
-            self.exp_dt = self.create_dt + timedelta(hours=int(os.environ['SESSION_DURATION_HOURS']))
-            self.user = user
+            pass
 
     class MethodRole(Base):
         """Many to many model for method and role models.
@@ -136,8 +108,7 @@ class DataBase(metaclass=SingletonMeta):
         __tablename__ = 'MethodRole'
 
         def __init__(self, method=None, role=None):
-            self.method = method
-            self.role = role
+            pass
 
         method_id = Column(Integer, ForeignKey('Method.Id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
         method = relationship('Method', back_populates='roles')
@@ -153,7 +124,7 @@ class DataBase(metaclass=SingletonMeta):
 
         """
 
-        return self.__engine
+        pass
 
     def create_session(self) -> DBSession:
         """Create and get database connection session.
@@ -163,37 +134,11 @@ class DataBase(metaclass=SingletonMeta):
 
         """
 
-        return sessionmaker(bind=self.__engine)()
+        pass
 
     def init_system(self):
         """Initialize database.
 
         """
 
-        self.Base.metadata.drop_all(bind=self.__engine)
-        self.Base.metadata.create_all(bind=self.__engine)
-        session = self.create_session()
-        role_visitor = self.Role('visitor')
-        role_trusted = self.Role('trusted')
-        role_admin = self.Role(
-            'admin',
-            users=[self.User('admin@fileserver.su', HashAPI.hash_sha512(os.environ['ADMIN_PASSWORD']), 'Admin')])
-        session.add_all([
-            self.Method('get_files', roles=[role_visitor, role_trusted, role_admin]),
-            self.Method('get_file_info', roles=[role_visitor, role_trusted, role_admin]),
-            self.Method('get_file_info_signed', roles=[role_visitor, role_trusted, role_admin]),
-            self.Method('create_file', roles=[role_trusted, role_admin]),
-            self.Method('delete_file', roles=[role_trusted, role_admin]),
-            self.Method('download_file', roles=[role_visitor, role_trusted, role_admin]),
-            self.Method('download_file_queued', roles=[role_visitor, role_trusted, role_admin]),
-            self.Method('add_method', roles=[role_admin]),
-            self.Method('delete_method', roles=[role_admin]),
-            self.Method('add_role', roles=[role_admin]),
-            self.Method('delete_role', roles=[role_admin]),
-            self.Method('add_method_to_role', roles=[role_admin]),
-            self.Method('delete_method_from_role', roles=[role_admin]),
-            self.Method('change_shared_prop', roles=[role_admin]),
-            self.Method('change_user_role', roles=[role_admin]),
-            self.Method('change_file_dir', roles=[role_admin]),
-        ])
-        session.commit()
+        pass
