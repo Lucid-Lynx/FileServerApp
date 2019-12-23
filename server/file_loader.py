@@ -18,9 +18,6 @@ class BaseLoader(Thread):
 
     """
 
-    home_dir = str(Path.home())
-    download_dir = '{}/Downloads'.format(home_dir)
-
     def __init__(self, daemon: bool = False):
         pass
 

@@ -162,9 +162,6 @@ class RSACipher(AESCipher):
 
     """
 
-    code = os.environ['CRYPTO_CODE']
-    key_protection = 'scryptAndAES128-CBC'
-
     def __init__(self, user_id: int):
         pass
 

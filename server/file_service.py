@@ -13,10 +13,6 @@ class FileService:
 
     """
 
-    __is_inited = False
-    __instance = None
-    extension = 'txt'
-
     def __new__(cls, *args, **kwargs):
         pass
 

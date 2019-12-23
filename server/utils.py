@@ -13,8 +13,6 @@ class SingletonMeta(type):
 
     """
 
-    __instance = None
-
     def __call__(cls):
         pass
 

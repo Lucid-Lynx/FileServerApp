@@ -19,13 +19,6 @@ class DataBase(metaclass=SingletonMeta):
 
     """
 
-    __is_inited = False
-    __instance = None
-    __db_string = "postgres://{}:{}@{}/{}".format(
-        os.environ['DB_USER'],
-        os.environ['DB_PASSWORD'],
-        os.environ['DB_HOST'],
-        os.environ['DB_NAME'])
     Base = declarative_base()
 
     def __init__(self):
@@ -40,9 +33,6 @@ class DataBase(metaclass=SingletonMeta):
         def __tablename__(self):
             pass
 
-        id = Column(Integer, name='Id', primary_key=True, autoincrement=True)
-        create_dt = Column(DateTime, name='Create Date')
-
         def __init__(self):
             pass
 
@@ -50,15 +40,6 @@ class DataBase(metaclass=SingletonMeta):
         """User model.
 
         """
-
-        email = Column(String, name='Email', unique=True)
-        password = Column(String, name='Password')
-        name = Column(String, name='Name')
-        surname = Column(String, name="Surname")
-        last_login_dt = Column(DateTime, name="Last Login Date")
-        role_id = Column(Integer, ForeignKey('Role.Id', ondelete='CASCADE', onupdate='CASCADE'))
-        role = relationship('Role', back_populates='users')
-        sessions = relationship('Session', back_populates='user', cascade='all, delete-orphan')
 
         def __init__(self, email: str, password: str, name: str, surname: str = None, role=None, sessions: list = None):
             pass
@@ -68,10 +49,6 @@ class DataBase(metaclass=SingletonMeta):
 
         """
 
-        name = Column(String, name='Name', unique=True)
-        users = relationship('User', back_populates='role', cascade='all, delete-orphan')
-        methods = relationship('MethodRole', back_populates='role')
-
         def __init__(self, name: str, users: list = None, methods: list = None):
             pass
 
@@ -80,10 +57,6 @@ class DataBase(metaclass=SingletonMeta):
 
         """
 
-        name = Column(String, name='Name', unique=True)
-        shared = Column(Boolean, name='Shared', default=False)
-        roles = relationship('MethodRole', back_populates='method')
-
         def __init__(self, name: str, shared: bool = False, roles: list = None):
             pass
 
@@ -91,11 +64,6 @@ class DataBase(metaclass=SingletonMeta):
         """Session model.
 
         """
-
-        uuid = Column(String, name='UUID', unique=True)
-        exp_dt = Column(DateTime, name='Expiration Date')
-        user_id = Column(Integer, ForeignKey('User.Id', ondelete='CASCADE', onupdate='CASCADE'))
-        user = relationship('User', back_populates='sessions')
 
         def __init__(self, user=None):
             pass
@@ -109,11 +77,6 @@ class DataBase(metaclass=SingletonMeta):
 
         def __init__(self, method=None, role=None):
             pass
-
-        method_id = Column(Integer, ForeignKey('Method.Id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-        method = relationship('Method', back_populates='roles')
-        role_id = Column(Integer, ForeignKey('Role.Id', ondelete='CASCADE', onupdate='CASCADE'), primary_key=True)
-        role = relationship('Role', back_populates='methods')
 
     @property
     def engine(self) -> Engine:
