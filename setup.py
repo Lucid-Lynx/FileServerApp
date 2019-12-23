@@ -10,6 +10,8 @@ setup(
     version=server.__version__,
     packages=find_packages(),
     long_description=open(join(dirname(__file__), 'README.txt')).read(),
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     entry_points={
         'console_scripts': ['fileserver = server.main:main']
     },
