@@ -13,7 +13,7 @@ setup(
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': ['fileserver = server.main:main']
+        'console_scripts': ['fileserver = server.main:main'],
     },
     install_requires=[
         'aiohttp==3.6.0',
