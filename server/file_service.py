@@ -184,7 +184,7 @@ class FileService(object):
 
         with open(full_filename, 'wb') as file_handler:
             if content:
-                data = bytes(content, 'utf-8')
+                data = bytes(content)
                 cipher.write_cipher_text(data, file_handler)
 
         return OrderedDict(
@@ -258,7 +258,7 @@ class FileServiceSigned(FileService):
         signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result_for_check.values()))))
 
         with open(full_filename, 'rb') as file_handler:
-            assert file_handler.read() == bytes(signature, 'utf-8'), 'Signatures are not match'
+            assert file_handler.read() == bytes(signature), 'Signatures are not match'
 
         return result
 
@@ -290,7 +290,7 @@ class FileServiceSigned(FileService):
         full_filename = '{}/{}'.format(self.path, filename)
 
         with open(full_filename, 'wb') as file_handler:
-            data = bytes(signature, 'utf-8')
+            data = bytes(signature)
             file_handler.write(data)
 
         return result

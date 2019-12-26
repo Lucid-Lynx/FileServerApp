@@ -45,15 +45,15 @@ def get_file_data(path):
     """
 
     print 'Input filename (without extension):'
-    filename = input()
+    filename = raw_input()
 
     print 'Check sign? y/n:'
-    is_signed = input()
+    is_signed = raw_input()
 
     if is_signed == 'y':
-        data = FileServiceSigned(path).get_file_data(filename)
+        data = FileServiceSigned(path=path).get_file_data(filename)
     elif is_signed == 'n':
-        data = FileService(path).get_file_data(filename)
+        data = FileService(path=path).get_file_data(filename)
     else:
         raise ValueError('Invalid value')
 
@@ -83,20 +83,20 @@ def create_file(path):
     """
 
     print 'Input content:'
-    content = input()
+    content = raw_input()
 
     print 'Input security level (low, medium, high):'
-    security_level = input()
+    security_level = raw_input()
 
     assert security_level in ['low', 'medium', 'high'], 'Invalid security level'
 
     print 'Sign file? y/n:'
-    is_signed = input()
+    is_signed = raw_input()
 
     if is_signed == 'y':
-        data = FileServiceSigned(path).create_file(content, security_level)
+        data = FileServiceSigned(path=path).create_file(content, security_level)
     elif is_signed == 'n':
-        data = FileService(path).create_file(content, security_level)
+        data = FileService(path=path).create_file(content, security_level)
     else:
         raise ValueError('Invalid value')
 
@@ -118,9 +118,9 @@ def delete_file(path):
     """
 
     print 'Input filename (without extension):'
-    filename = input()
+    filename = raw_input()
 
-    data = FileService(path).delete_file(filename)
+    data = FileService(path=path).delete_file(filename)
 
     return data
 
@@ -137,7 +137,7 @@ def change_dir(path):
     """
 
     print 'Input new working directory path:'
-    new_path = input()
+    new_path = raw_input()
 
     FileService(path).path = new_path
     FileServiceSigned.path = new_path
@@ -157,7 +157,7 @@ def main():
 
     parser = commandline_parser()
     namespace = parser.parse_args(sys.argv[1:])
-    folder = namespace.folder
+    path = namespace.folder
 
     print 'Commands:'
     print 'list - get files list'
@@ -165,39 +165,46 @@ def main():
     print 'create - create file'
     print 'delete - delete file'
     print 'chdir - change working directory'
+    print 'exit - exit from app'
     print '\n'
 
     while True:
 
         try:
             print 'Input command:'
-            command = input()
+            command = raw_input()
 
             if command == 'list':
-                data = FileService(folder).get_files()
+                data = FileService(path=path).get_files()
 
             elif command == 'get':
-                data = get_file_data(folder)
+                data = get_file_data(path)
 
             elif command == 'create':
-                data = create_file(folder)
+                data = create_file(path)
 
             elif command == 'delete':
-                data = delete_file(folder)
+                data = delete_file(path)
+
+            elif command == 'chdir':
+                data = change_dir(path)
+
+            elif command == 'exit':
+                return
 
             else:
                 raise ValueError('Invalid command')
 
-            return {
+            print '\n{}\n'.format({
                 'status': 'success',
                 'result': json.dumps(data, indent=4),
-            }
+            })
 
         except (ValueError, AssertionError), err:
-            return {
+            print '\n{}\n'.format({
                 'status': 'error',
-                'message': err.message()
-            }
+                'message': err.message
+            })
 
 
 if __name__ == '__main__':
