@@ -6,18 +6,18 @@ import hashlib
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Random import get_random_bytes
-from typing import Tuple, BinaryIO
+from typing import BinaryIO
 
-key_folder = '../keys'
+key_folder = os.environ['KEY_DIR']
 
 
-class HashAPI:
+class HashAPI(object):
     """Class with static methods for generating hashes.
 
     """
 
     @staticmethod
-    def hash_sha512(input_str: str) -> str:
+    def hash_sha512(input_str):
         """Generate hash SHA-512.
 
         Args:
@@ -37,7 +37,7 @@ class HashAPI:
         return hash_obj.hexdigest()
 
     @staticmethod
-    def hash_md5(input_str: str) -> str:
+    def hash_md5(input_str):
         """Generate hash MD5.
 
         Args:
@@ -57,7 +57,7 @@ class HashAPI:
         return hash_obj.hexdigest()
 
 
-class BaseCipher:
+class BaseCipher(object):
     """Base cipher class.
 
     """
@@ -66,7 +66,7 @@ class BaseCipher:
         if not os.path.exists(key_folder):
             os.mkdir(key_folder)
 
-    def encrypt(self, data: bytes):
+    def encrypt(self, data):
         """Encrypt data.
 
         Args:
@@ -76,7 +76,7 @@ class BaseCipher:
 
         pass
 
-    def decrypt(self, input_file: BinaryIO) -> bytes:
+    def decrypt(self, input_file):
         """Decrypt data.
 
         Args:
@@ -89,7 +89,7 @@ class BaseCipher:
 
         return input_file.read()
 
-    def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+    def write_cipher_text(self, data, out_file):
         """Encrypt data and write cipher text into output file.
 
         Args:
@@ -106,12 +106,11 @@ class AESCipher(BaseCipher):
 
     """
 
-    def __init__(self, user_id: int):
-        super().__init__()
-        self.user_id = user_id
-        self.session_key_file = '{}/{}_session_aes_key.bin'.format(key_folder, self.user_id)
+    def __init__(self):
+        super(BaseCipher, self).__init__()
+        self.session_key_file = '{}/session_aes_key.bin'.format(key_folder)
 
-    def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes, bytes]:
+    def encrypt(self, data):
         """Encrypt data.
 
         Args:
@@ -128,7 +127,7 @@ class AESCipher(BaseCipher):
 
         return cipher_text, tag, cipher_aes.nonce, session_key
 
-    def decrypt(self, input_file: BinaryIO) -> bytes:
+    def decrypt(self, input_file):
         """Decrypt data.
 
         Args:
@@ -145,7 +144,7 @@ class AESCipher(BaseCipher):
         return self.decrypt_aes_data(cipher_text, tag, nonce, session_key)
 
     @staticmethod
-    def decrypt_aes_data(cipher_text: bytes, tag: bytes, nonce: bytes, session_key: bytes) -> bytes:
+    def decrypt_aes_data(cipher_text, tag, nonce, session_key):
         """Decrypt AES data.
 
         Args:
@@ -164,7 +163,7 @@ class AESCipher(BaseCipher):
 
         return data
 
-    def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+    def write_cipher_text(self, data, out_file):
         """Encrypt data and write cipher text into output file.
 
         Args:
@@ -192,13 +191,13 @@ class RSACipher(AESCipher):
     code = os.environ['CRYPTO_CODE']
     key_protection = 'scryptAndAES128-CBC'
 
-    def __init__(self, user_id: int):
-        super().__init__(user_id)
+    def __init__(self):
+        super(RSACipher, self).__init__()
         key = RSA.generate(2048)
         encrypted_key = key.export_key(passphrase=self.code, pkcs=8, protection=self.key_protection)
 
-        self.private_key_file = '{}/{}_private_rsa_key.bin'.format(key_folder, self.user_id)
-        self.public_key_file = '{}/{}_public_rsa_key.pem'.format(key_folder, self.user_id)
+        self.private_key_file = '{}/private_rsa_key.bin'.format(key_folder)
+        self.public_key_file = '{}/public_rsa_key.pem'.format(key_folder)
 
         if not os.path.exists(self.private_key_file):
             with open(self.private_key_file, 'wb') as f:
@@ -208,7 +207,7 @@ class RSACipher(AESCipher):
             with open(self.public_key_file, 'wb') as f:
                 f.write(key.publickey().exportKey())
 
-    def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes, bytes]:
+    def encrypt(self, data):
         """Encrypt data.
 
         Args:
@@ -219,7 +218,7 @@ class RSACipher(AESCipher):
 
         """
 
-        cipher_text, tag, nonce, session_key = super().encrypt(data)
+        cipher_text, tag, nonce, session_key = super(RSACipher, self).encrypt(data)
 
         public_key = RSA.import_key(open(self.public_key_file).read())
         cipher_rsa = PKCS1_OAEP.new(public_key)
@@ -227,7 +226,7 @@ class RSACipher(AESCipher):
 
         return cipher_text, tag, nonce, enc_session_key
 
-    def decrypt(self, input_file: BinaryIO) -> bytes:
+    def decrypt(self, input_file):
         """Decrypt data.
 
         Args:
@@ -246,7 +245,7 @@ class RSACipher(AESCipher):
 
         return self.decrypt_aes_data(cipher_text, tag, nonce, session_key)
 
-    def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+    def write_cipher_text(self, data, out_file):
         """Encrypt data and write cipher text into output file.
 
         Args:
