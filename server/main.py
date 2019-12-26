@@ -24,11 +24,11 @@ def commandline_parser():
     return parser
 
 
-def get_file_data(folder):
+def get_file_data(path):
     """Get full info about file.
 
     Args:
-        folder (str): Working directory path.
+        path (str): Working directory path.
 
     Returns:
         Dict, which contains full info about file. Keys:
@@ -51,22 +51,22 @@ def get_file_data(folder):
     is_signed = input()
 
     if is_signed == 'y':
-        data = FileServiceSigned(folder).get_file_data(filename)
+        data = FileServiceSigned(path).get_file_data(filename)
     elif is_signed == 'n':
-        data = FileService(folder).get_file_data(filename)
+        data = FileService(path).get_file_data(filename)
     else:
         raise ValueError('Invalid value')
 
     return data
 
 
-def create_file(folder):
+def create_file(path):
     """Create new .txt file.
 
     Method generates name of file from random string with digits and latin letters.
 
     Args:
-        folder (str): Working directory path.
+        path (str): Working directory path.
 
     Returns:
         Dict, which contains name of created file. Keys:
@@ -90,24 +90,24 @@ def create_file(folder):
 
     assert security_level in ['low', 'medium', 'high'], 'Invalid security level'
 
-    print  'Sign file? y/n:'
+    print 'Sign file? y/n:'
     is_signed = input()
 
     if is_signed == 'y':
-        data = FileServiceSigned(folder).create_file(content, security_level)
+        data = FileServiceSigned(path).create_file(content, security_level)
     elif is_signed == 'n':
-        data = FileService(folder).create_file(content, security_level)
+        data = FileService(path).create_file(content, security_level)
     else:
         raise ValueError('Invalid value')
 
     return data
 
 
-def delete_file(folder):
+def delete_file(path):
     """Delete file.
 
     Args:
-        folder (str): Working directory path.
+        path (str): Working directory path.
 
     Returns:
         Str with filename with .txt file extension.
@@ -120,9 +120,29 @@ def delete_file(folder):
     print 'Input filename (without extension):'
     filename = input()
 
-    data = FileService(folder).delete_file(filename)
+    data = FileService(path).delete_file(filename)
 
     return data
+
+
+def change_dir(path):
+    """Change working directory.
+
+    Args:
+        path (str): Working directory path.
+
+    Returns:
+        Str with successfully result.
+
+    """
+
+    print 'Input new working directory path:'
+    new_path = input()
+
+    FileService(path).path = new_path
+    FileServiceSigned.path = new_path
+
+    return 'Working directory is successfully changed. New path is {}'.format(new_path)
 
 
 def main():
