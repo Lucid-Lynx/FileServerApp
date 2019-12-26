@@ -1,7 +1,6 @@
 # Copyright 2019 by Kirill Kanin.
 # All rights reserved.
 
-from builtins import range
 import random
 import string
 from datetime import datetime

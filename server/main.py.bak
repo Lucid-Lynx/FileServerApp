@@ -2,7 +2,6 @@ from __future__ import print_function
 # Copyright 2019 by Kirill Kanin.
 # All rights reserved.
 
-from builtins import input
 import argparse
 import os
 import sys
@@ -47,10 +46,10 @@ def get_file_data(path):
     """
 
     print('Input filename (without extension):')
-    filename = input()
+    filename = raw_input()
 
     print('Check sign? y/n:')
-    is_signed = input()
+    is_signed = raw_input()
 
     if is_signed == 'y':
         data = FileServiceSigned(path=path).get_file_data(filename)
@@ -85,15 +84,15 @@ def create_file(path):
     """
 
     print('Input content:')
-    content = input()
+    content = raw_input()
 
     print('Input security level (low, medium, high):')
-    security_level = input()
+    security_level = raw_input()
 
     assert security_level in ['low', 'medium', 'high'], 'Invalid security level'
 
     print('Sign file? y/n:')
-    is_signed = input()
+    is_signed = raw_input()
 
     if is_signed == 'y':
         data = FileServiceSigned(path=path).create_file(content, security_level)
@@ -120,7 +119,7 @@ def delete_file(path):
     """
 
     print('Input filename (without extension):')
-    filename = input()
+    filename = raw_input()
 
     data = FileService(path=path).delete_file(filename)
 
@@ -139,7 +138,7 @@ def change_dir(path):
     """
 
     print('Input new working directory path:')
-    new_path = input()
+    new_path = raw_input()
 
     FileService(path).path = new_path
     FileServiceSigned.path = new_path
@@ -174,7 +173,7 @@ def main():
 
         try:
             print('Input command:')
-            command = input()
+            command = raw_input()
 
             if command == 'list':
                 data = FileService(path=path).get_files()
@@ -205,7 +204,7 @@ def main():
         except (ValueError, AssertionError) as err:
             print('\n{}\n'.format({
                 'status': 'error',
-                'message': err.message if sys.version_info[0] < 3 else err,
+                'message': err.message
             }))
 
 
