@@ -8,7 +8,7 @@ from Crypto.Cipher import AES, PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 from typing import Tuple, BinaryIO
 
-key_folder = '../keys'
+key_folder = os.environ['KEY_DIR']
 
 
 class HashAPI:
