@@ -20,7 +20,8 @@ def change_dir(path):
 
     """
 
-    pass
+    assert os.path.exists(path), 'Directory {} is not found'.format(path)
+    os.chdir(path)
 
 
 def get_file_data(filename):
