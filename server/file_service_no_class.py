@@ -6,6 +6,8 @@ import os
 import sys
 import server.utils as utils
 
+extension = 'txt'
+
 
 def change_dir(path):
     """Change current directory of app.
