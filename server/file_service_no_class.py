@@ -118,6 +118,7 @@ def create_file(content=None):
     while os.path.exists(full_filename):
         filename = '{}.{}'.format(utils.generate_string(), extension)
         full_filename = '{}/{}'.format(path, filename)
+        print(filename)
 
     with open(full_filename, 'wb') as file_handler:
         if content:
