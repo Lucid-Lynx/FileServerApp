@@ -90,14 +90,13 @@ def get_files():
     return data
 
 
-def create_file(content=None, security_level=None):
+def create_file(content=None):
     """Create new .txt file.
 
     Method generates name of file from random string with digits and latin letters.
 
     Args:
-        content (str): String with file content,
-        security_level (str): String with security level.
+        content (str): String with file content.
 
     Returns:
         Dict, which contains name of created file. Keys:
@@ -113,11 +112,11 @@ def create_file(content=None, security_level=None):
     """
 
     path = os.getcwd()
-    filename = '{}_{}.{}'.format(utils.generate_string(), security_level, extension)
+    filename = '{}.{}'.format(utils.generate_string(), extension)
     full_filename = '{}/{}'.format(path, filename)
 
     while os.path.exists(full_filename):
-        filename = '{}_{}.{}'.format(utils.generate_string(), security_level, extension)
+        filename = '{}.{}'.format(utils.generate_string(), extension)
         full_filename = '{}/{}'.format(path, filename)
 
     with open(full_filename, 'wb') as file_handler:
