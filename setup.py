@@ -8,7 +8,7 @@ from os.path import join, dirname
 setup(
     name='FileServer',
     version=server.__version__,
-    packages=find_packages(),
+    packages=find_packages(exclude=['server.database', ]),
     long_description=open(join(dirname(__file__), 'README.txt')).read(),
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],

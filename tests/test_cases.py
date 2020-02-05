@@ -8,8 +8,8 @@ import logging
 import server.utils as utils
 from collections import OrderedDict
 from aiohttp import web
-from server.handler import Handler
-from server.database import DataBase
+# from server.handler import Handler
+# from server.database import DataBase
 from server.crypto import HashAPI, AESCipher, RSACipher
 
 logger = logging.getLogger(__name__)
