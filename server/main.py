@@ -4,7 +4,11 @@
 import argparse
 import os
 import sys
+import logging
 import json
+from aiohttp import web
+# from server.handler import Handler
+# from server.database import DataBase
 from server.file_service import FileService, FileServiceSigned
 import server.file_service_no_class as FileServiceNoClass
 
@@ -25,11 +29,8 @@ def commandline_parser():
     return parser
 
 
-def get_file_data(path):
+def get_file_data():
     """Get full info about file.
-
-    Args:
-        path (str): Working directory path.
 
     Returns:
         Dict, which contains full info about file. Keys:
@@ -40,34 +41,22 @@ def get_file_data(path):
             size (int): size of file in bytes.
 
     Raises:
-        AssertionError: if file does not exist, filename format is invalid,
-        ValueError: if security level is invalid.
+        AssertionError: if file does not exist, filename format is invalid.
 
     """
 
     print('Input filename (without extension):')
     filename = input()
 
-    print('Check sign? y/n:')
-    is_signed = input()
-
-    if is_signed == 'y':
-        data = FileServiceSigned(path=path).get_file_data(filename)
-    elif is_signed == 'n':
-        data = FileService(path=path).get_file_data(filename)
-    else:
-        raise ValueError('Invalid value')
+    data = FileServiceNoClass.get_file_data(filename)
 
     return data
 
 
-def create_file(path):
+def create_file():
     """Create new .txt file.
 
     Method generates name of file from random string with digits and latin letters.
-
-    Args:
-        path (str): Working directory path.
 
     Returns:
         Dict, which contains name of created file. Keys:
@@ -78,37 +67,20 @@ def create_file(path):
             user_id (int): user Id.
 
     Raises:
-        AssertionError: if user_id is not set,
-        ValueError: if security level is invalid.
+        AssertionError: if user_id is not set.
 
     """
 
     print('Input content:')
     content = input()
 
-    print('Input security level (low, medium, high):')
-    security_level = input()
-
-    assert security_level in ['low', 'medium', 'high'], 'Invalid security level'
-
-    print('Sign file? y/n:')
-    is_signed = input()
-
-    if is_signed == 'y':
-        data = FileServiceSigned(path=path).create_file(content, security_level)
-    elif is_signed == 'n':
-        data = FileService(path=path).create_file(content, security_level)
-    else:
-        raise ValueError('Invalid value')
+    data = FileServiceNoClass.create_file(content)
 
     return data
 
 
-def delete_file(path):
+def delete_file():
     """Delete file.
-
-    Args:
-        path (str): Working directory path.
 
     Returns:
         Str with filename with .txt file extension.
@@ -121,16 +93,13 @@ def delete_file(path):
     print('Input filename (without extension):')
     filename = input()
 
-    data = FileService(path=path).delete_file(filename)
+    data = FileServiceNoClass.delete_file(filename)
 
     return data
 
 
-def change_dir(path):
+def change_dir():
     """Change working directory.
-
-    Args:
-        path (str): Working directory path.
 
     Returns:
         Str with successfully result.
@@ -140,8 +109,7 @@ def change_dir(path):
     print('Input new working directory path:')
     new_path = input()
 
-    FileService(path).path = new_path
-    FileServiceSigned.path = new_path
+    FileServiceNoClass.change_dir(new_path)
 
     return 'Working directory is successfully changed. New path is {}'.format(new_path)
 
@@ -159,6 +127,7 @@ def main():
     parser = commandline_parser()
     namespace = parser.parse_args(sys.argv[1:])
     path = namespace.folder
+    FileServiceNoClass.change_dir(path)
 
     print('Commands:')
     print('list - get files list')
@@ -176,19 +145,19 @@ def main():
             command = input()
 
             if command == 'list':
-                data = FileService(path=path).get_files()
+                data = FileServiceNoClass.get_files()
 
             elif command == 'get':
-                data = get_file_data(path)
+                data = get_file_data()
 
             elif command == 'create':
-                data = create_file(path)
+                data = create_file()
 
             elif command == 'delete':
-                data = delete_file(path)
+                data = delete_file()
 
             elif command == 'chdir':
-                data = change_dir(path)
+                data = change_dir()
 
             elif command == 'exit':
                 return
