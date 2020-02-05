@@ -74,7 +74,20 @@ def get_files():
     """
 
     path = os.getcwd()
-    
+    data = []
+    files = [f for f in os.listdir(path) if os.path.isfile('{}/{}'.format(path, f))]
+    files = list([f for f in files if len(f.split('.')) > 1 and f.split('.')[1] == extension])
+
+    for f in files:
+        full_filename = '{}/{}'.format(path, f)
+        data.append({
+            'name': f,
+            'create_date': utils.convert_date(os.path.getctime(full_filename)),
+            'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
+            'size': '{} bytes'.format(os.path.getsize(full_filename)),
+        })
+
+    return data
 
 
 def create_file(content=None, security_level=None):
@@ -100,7 +113,8 @@ def create_file(content=None, security_level=None):
 
     """
 
-    pass
+    path = os.getcwd()
+    
 
 
 def delete_file(filename):
