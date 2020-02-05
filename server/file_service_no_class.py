@@ -39,7 +39,7 @@ def get_file_data(filename):
             size (int): size of file in bytes.
 
     Raises:
-        AssertionError: if file does not exist, filename format is invalid,
+        AssertionError: if file does not exist, filename format is invalid.
 
     """
 
@@ -108,13 +108,32 @@ def create_file(content=None, security_level=None):
             user_id (int): user Id.
 
     Raises:
-        AssertionError: if user_id is not set,
-        ValueError: if security level is invalid.
+        AssertionError: if user_id is not set.
 
     """
 
     path = os.getcwd()
-    
+    filename = '{}_{}.{}'.format(utils.generate_string(), security_level, extension)
+    full_filename = '{}/{}'.format(path, filename)
+
+    while os.path.exists(full_filename):
+        filename = '{}_{}.{}'.format(utils.generate_string(), security_level, extension)
+        full_filename = '{}/{}'.format(path, filename)
+
+    with open(full_filename, 'wb') as file_handler:
+        if content:
+            if sys.version_info[0] < 3:
+                data = bytes(content)
+            else:
+                data = bytes(content, 'utf-8')
+            
+
+    return {
+        'name': filename,
+        'create_date': utils.convert_date(os.path.getctime(full_filename)),
+        'size': os.path.getsize(full_filename),
+        'content': content,
+    }
 
 
 def delete_file(filename):
