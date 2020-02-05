@@ -126,7 +126,7 @@ def create_file(content=None, security_level=None):
                 data = bytes(content)
             else:
                 data = bytes(content, 'utf-8')
-            
+            file_handler.write(data)
 
     return {
         'name': filename,
