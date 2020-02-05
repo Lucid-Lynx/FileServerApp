@@ -150,4 +150,16 @@ def delete_file(filename):
 
     """
 
-    pass
+    path = os.getcwd()
+    short_filename = '{}.{}'.format(filename, extension)
+    signature_file = '{}.{}'.format(filename, 'md5')
+    full_filename = "{}/{}".format(path, short_filename)
+    full_signature_file = "{}/{}".format(path, signature_file)
+    assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
+
+    os.remove(full_filename)
+
+    if os.path.exists(full_signature_file):
+        os.remove(full_signature_file)
+
+    return short_filename
