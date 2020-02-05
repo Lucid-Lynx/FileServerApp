@@ -40,11 +40,24 @@ def get_file_data(filename):
 
     Raises:
         AssertionError: if file does not exist, filename format is invalid,
-        ValueError: if security level is invalid.
 
     """
 
-    pass
+    short_filename = '{}.{}'.format(filename, extension)
+    full_filename = '{}/{}'.format(path, short_filename)
+    assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
+
+    filename_parts = filename.split('_')
+    assert len(filename_parts) == 2, 'Invalid format of file name'
+
+    with open(full_filename, 'rb') as file_handler:
+        return {
+            'name': short_filename,
+            'create_date': utils.convert_date(os.path.getctime(full_filename)),
+            'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
+            'size': os.path.getsize(full_filename),
+            'context': ,
+        }
 
 
 def get_files():
