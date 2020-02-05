@@ -1,33 +1,31 @@
 # Copyright 2019 by Kirill Kanin.
 # All rights reserved.
 
-import argparse
+
 import os
 import sys
-import logging
-import json
-from aiohttp import web
-from server.handler import Handler
-from server.database import DataBase
-from server.file_service import FileService, FileServiceSigned
-import server.file_service_no_class as FileServiceNoClass
+import server.utils as utils
 
 
-def commandline_parser() -> argparse.ArgumentParser:
-    """Command line parser.
+def change_dir(path):
+    """Change current directory of app.
 
-    Parse port and working directory parameters from command line.
+    Args:
+        path (str): Path to working directory with files.
+
+    Raises:
+        AssertionError: if directory does not exist.
 
     """
 
     pass
 
 
-def get_file_data(path):
+def get_file_data(filename):
     """Get full info about file.
 
     Args:
-        path (str): Working directory path.
+        filename (str): Filename without .txt file extension.
 
     Returns:
         Dict, which contains full info about file. Keys:
@@ -46,13 +44,29 @@ def get_file_data(path):
     pass
 
 
-def create_file(path):
+def get_files():
+    """Get info about all files in working directory.
+
+    Returns:
+        List of dicts, which contains info about each file. Keys:
+            name (str): name of file with .txt extension.
+            create_date (str): date of file creation.
+            edit_date (str): date of last file modification.
+            size (str): size of file in bytes.
+
+    """
+
+    pass
+
+
+def create_file(content=None, security_level=None):
     """Create new .txt file.
 
     Method generates name of file from random string with digits and latin letters.
 
     Args:
-        path (str): Working directory path.
+        content (str): String with file content,
+        security_level (str): String with security level.
 
     Returns:
         Dict, which contains name of created file. Keys:
@@ -71,11 +85,11 @@ def create_file(path):
     pass
 
 
-def delete_file(path):
+def delete_file(filename):
     """Delete file.
 
     Args:
-        path (str): Working directory path.
+        filename (str): Filename without .txt file extension.
 
     Returns:
         Str with filename with .txt file extension.
@@ -86,36 +100,3 @@ def delete_file(path):
     """
 
     pass
-
-
-def change_dir(path):
-    """Change working directory.
-
-    Args:
-        path (str): Working directory path.
-
-    Returns:
-        Str with successfully result.
-
-    """
-
-    pass
-
-
-def main():
-    """Entry point of app.
-
-    Get and parse command line parameters and configure web app.
-    Command line options:
-    -p --port - port (default: 8080).
-    -f --folder - working directory (absolute or relative path, default: current app folder FileServer).
-    -i --init - initialize database.
-    -h --help - help.
-
-    """
-
-    pass
-
-
-if __name__ == '__main__':
-    main()
