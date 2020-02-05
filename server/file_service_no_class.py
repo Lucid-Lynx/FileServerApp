@@ -43,6 +43,7 @@ def get_file_data(filename):
 
     """
 
+    path = os.getcwd()
     short_filename = '{}.{}'.format(filename, extension)
     full_filename = '{}/{}'.format(path, short_filename)
     assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
@@ -56,7 +57,7 @@ def get_file_data(filename):
             'create_date': utils.convert_date(os.path.getctime(full_filename)),
             'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
             'size': os.path.getsize(full_filename),
-            'context': ,
+            'context': file_handler.read(),
         }
 
 
@@ -72,7 +73,8 @@ def get_files():
 
     """
 
-    pass
+    path = os.getcwd()
+    
 
 
 def create_file(content=None, security_level=None):
