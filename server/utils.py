@@ -17,7 +17,7 @@ class SingletonMeta(type):
         pass
 
 
-def generate_string() -> str:
+def generate_string():
     """Generate random string.
 
     Method generates random string with digits and latin letters.
@@ -27,10 +27,13 @@ def generate_string() -> str:
 
     """
 
-    pass
+    letters = string.ascii_letters
+    digits = string.digits
+
+    return ''.join(random.choice(letters + digits) for i in range(string_length))
 
 
-def convert_date(timestamp: float) -> str:
+def convert_date(timestamp):
     """Convert date from timestamp to string.
 
     Example of date format: 2019-09-05 11:22:33.
@@ -43,4 +46,4 @@ def convert_date(timestamp: float) -> str:
 
     """
 
-    pass
+    return datetime.fromtimestamp(timestamp).strftime("%Y.%m.%d %H:%M:%S")
