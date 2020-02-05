@@ -194,6 +194,9 @@ class TestSuite:
 
         pass
 
-    async def test_change_file_dir(self, client, prepare_data):
+    def test_change_file_dir(self, prepare_data):
+        new_test_folder = '../test_folder_2'
 
-        pass
+        logger.info('Test request')
+        FileServerNoClass.change_dir(new_test_folder)
+        logger.info('Test is succeeded')
