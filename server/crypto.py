@@ -106,10 +106,9 @@ class AESCipher(BaseCipher):
 
     """
 
-    def __init__(self, user_id: int):
+    def __init__(self):
         super().__init__()
-        self.user_id = user_id
-        self.session_key_file = '{}/{}_session_aes_key.bin'.format(key_folder, self.user_id)
+        self.session_key_file = '{}/session_aes_key.bin'.format(key_folder)
 
     def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes, bytes]:
         """Encrypt data.
@@ -192,13 +191,13 @@ class RSACipher(AESCipher):
     code = os.environ['CRYPTO_CODE']
     key_protection = 'scryptAndAES128-CBC'
 
-    def __init__(self, user_id: int):
-        super().__init__(user_id)
+    def __init__(self):
+        super().__init__()
         key = RSA.generate(2048)
         encrypted_key = key.export_key(passphrase=self.code, pkcs=8, protection=self.key_protection)
 
-        self.private_key_file = '{}/{}_private_rsa_key.bin'.format(key_folder, self.user_id)
-        self.public_key_file = '{}/{}_public_rsa_key.pem'.format(key_folder, self.user_id)
+        self.private_key_file = '{}/private_rsa_key.bin'.format(key_folder)
+        self.public_key_file = '{}/public_rsa_key.pem'.format(key_folder)
 
         if not os.path.exists(self.private_key_file):
             with open(self.private_key_file, 'wb') as f:

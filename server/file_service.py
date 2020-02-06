@@ -72,12 +72,11 @@ class FileService:
         assert os.path.exists(path), 'Directory {} is not found'.format(path)
         os.chdir(path)
 
-    def get_file_data(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
+    def get_file_data(self, filename: str) -> typing.Dict[str, str]:
         """Get full info about file.
 
         Args:
-            filename (str): Filename without .txt file extension,
-            user_id (int): User Id.
+            filename (str): Filename without .txt file extension.
 
         Returns:
             Dict, which contains full info about file. Keys:
@@ -94,8 +93,6 @@ class FileService:
 
         """
 
-        assert user_id, 'User Id is not set'
-
         short_filename = '{}.{}'.format(filename, self.extension)
         full_filename = '{}/{}'.format(self.path, short_filename)
         assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
@@ -107,9 +104,9 @@ class FileService:
         if not security_level or security_level == 'low':
             cipher = BaseCipher()
         elif security_level == 'medium':
-            cipher = AESCipher(user_id)
+            cipher = AESCipher()
         elif security_level == 'high':
-            cipher = RSACipher(user_id)
+            cipher = RSACipher()
         else:
             raise ValueError('Security level is invalid')
 
@@ -119,8 +116,7 @@ class FileService:
                 create_date=utils.convert_date(os.path.getctime(full_filename)),
                 edit_date=utils.convert_date(os.path.getmtime(full_filename)),
                 size=os.path.getsize(full_filename),
-                content=cipher.decrypt(file_handler).decode('utf-8'),
-                user_id=user_id)
+                content=cipher.decrypt(file_handler).decode('utf-8'))
 
     async def get_file_data_async(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
         """Get full info about file. Asynchronous version.
@@ -174,15 +170,14 @@ class FileService:
         return data
 
     def create_file(
-            self, content: str = None, security_level: str = None, user_id: int = None) -> typing.Dict[str, str]:
+            self, content: str = None, security_level: str = None) -> typing.Dict[str, str]:
         """Create new .txt file.
 
         Method generates name of file from random string with digits and latin letters.
 
         Args:
             content (str): String with file content,
-            security_level (str): String with security level,
-            user_id (int): User Id.
+            security_level (str): String with security level.
 
         Returns:
             Dict, which contains name of created file. Keys:
@@ -198,8 +193,6 @@ class FileService:
 
         """
 
-        assert user_id, 'User Id is not set'
-
         filename = '{}_{}.{}'.format(utils.generate_string(), security_level, self.extension)
         full_filename = '{}/{}'.format(self.path, filename)
 
@@ -210,9 +203,9 @@ class FileService:
         if not security_level or security_level == 'low':
             cipher = BaseCipher()
         elif security_level == 'medium':
-            cipher = AESCipher(user_id)
+            cipher = AESCipher()
         elif security_level == 'high':
-            cipher = RSACipher(user_id)
+            cipher = RSACipher()
         else:
             raise ValueError('Security level is invalid')
 
@@ -225,8 +218,7 @@ class FileService:
             name=filename,
             create_date=utils.convert_date(os.path.getctime(full_filename)),
             size=os.path.getsize(full_filename),
-            content=content,
-            user_id=user_id)
+            content=content)
 
     def delete_file(self, filename: str):
         """Delete file.
@@ -261,12 +253,11 @@ class FileServiceSigned(FileService):
 
     """
 
-    def get_file_data(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
+    def get_file_data(self, filename: str) -> typing.Dict[str, str]:
         """Get full info about file.
 
         Args:
-            filename (str): Filename without .txt file extension,
-            user_id (int): User Id.
+            filename (str): Filename without .txt file extension.
 
         Returns:
             Dict, which contains full info about file. Keys:
@@ -284,7 +275,7 @@ class FileServiceSigned(FileService):
 
         """
 
-        result = super().get_file_data(filename, user_id)
+        result = super().get_file_data(filename)
         result_for_check = result
         result_for_check.pop('edit_date')
 
@@ -325,15 +316,14 @@ class FileServiceSigned(FileService):
         pass
 
     def create_file(
-            self, content: str = None, security_level: str = None, user_id: int = None) -> typing.Dict[str, str]:
+            self, content: str = None, security_level: str = None) -> typing.Dict[str, str]:
         """Create new .txt file with signature file.
 
         Method generates name of file from random string with digits and latin letters.
 
         Args:
             content (str): String with file content,
-            security_level (str): String with security level,
-            user_id (int): User Id.
+            security_level (str): String with security level.
 
         Returns:
             Dict, which contains name of created file. Keys:
@@ -349,7 +339,7 @@ class FileServiceSigned(FileService):
 
         """
 
-        result = super().create_file(content, security_level, user_id)
+        result = super().create_file(content, security_level)
         signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result.values()))))
         filename = '{}.{}'.format(result['name'].split('.')[0], 'md5')
         full_filename = '{}/{}'.format(self.path, filename)
