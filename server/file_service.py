@@ -272,7 +272,7 @@ class FileServiceSigned(FileService):
 
         return result
 
-    def create_file(self, content= None, security_level= None):
+    def create_file(self, content=None, security_level=None):
         """Create new .txt file with signature file.
 
         Method generates name of file from random string with digits and latin letters.
