@@ -326,8 +326,8 @@ class TestSuite:
         logger.info('Test request. Directory path is set')
         file_service = FileService(path=test_folder)
         file_service_signed = FileServiceSigned(path=test_folder)
-        file_service.change_dir(new_test_folder)
-        file_service_signed.change_dir(new_test_folder)
+        file_service.path = new_test_folder
+        file_service_signed.path = new_test_folder
         assert file_service.path == new_test_folder
         assert file_service_signed.path == new_test_folder
         logger.info('Test is succeeded')
