@@ -1,11 +1,7 @@
 # Copyright 2019 by Kirill Kanin.
 # All rights reserved.
 
-from builtins import bytes
-from builtins import str
-from builtins import object
 import os
-import sys
 import server.utils as utils
 from collections import OrderedDict
 from server.crypto import BaseCipher, AESCipher, RSACipher, HashAPI
@@ -106,9 +102,9 @@ class FileService(object):
         if not security_level or security_level == 'low':
             cipher = BaseCipher()
         elif security_level == 'medium':
-            cipher = AESCipher()
+            cipher = AESCipher(self.path)
         elif security_level == 'high':
-            cipher = RSACipher()
+            cipher = RSACipher(self.path)
         else:
             raise ValueError('Security level is invalid')
 
@@ -118,7 +114,7 @@ class FileService(object):
                 create_date=utils.convert_date(os.path.getctime(full_filename)),
                 edit_date=utils.convert_date(os.path.getmtime(full_filename)),
                 size=os.path.getsize(full_filename),
-                content=cipher.decrypt(file_handler).decode('utf-8'))
+                content=cipher.decrypt(file_handler, filename).decode('utf-8'))
 
     def get_files(self):
         """Get info about all files in working directory.
@@ -134,7 +130,7 @@ class FileService(object):
 
         data = []
         files = [f for f in os.listdir(self.path) if os.path.isfile('{}/{}'.format(self.path, f))]
-        files = list([f for f in files if len(f.split('.')) > 1 and f.split('.')[1] == self.extension])
+        files = list(filter(lambda f: len(f.split('.')) > 1 and f.split('.')[1] == self.extension, files))
 
         for f in files:
             full_filename = '{}/{}'.format(self.path, f)
@@ -180,19 +176,16 @@ class FileService(object):
         if not security_level or security_level == 'low':
             cipher = BaseCipher()
         elif security_level == 'medium':
-            cipher = AESCipher()
+            cipher = AESCipher(self.path)
         elif security_level == 'high':
-            cipher = RSACipher()
+            cipher = RSACipher(self.path)
         else:
             raise ValueError('Security level is invalid')
 
         with open(full_filename, 'wb') as file_handler:
             if content:
-                if sys.version_info[0] < 3:
-                    data = bytes(content)
-                else:
-                    data = bytes(content, 'utf-8')
-                cipher.write_cipher_text(data, file_handler)
+                data = bytes(content)
+                cipher.write_cipher_text(data, file_handler, filename.split('.')[0])
 
         return OrderedDict(
             name=filename,
@@ -265,10 +258,7 @@ class FileServiceSigned(FileService):
         signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result_for_check.values()))))
 
         with open(full_filename, 'rb') as file_handler:
-            if sys.version_info[0] < 3:
-                assert file_handler.read() == bytes(signature), 'Signatures are not match'
-            else:
-                assert file_handler.read() == bytes(signature, 'utf-8'), 'Signatures are not match'
+            assert file_handler.read() == bytes(signature), 'Signatures are not match'
 
         return result
 
@@ -300,10 +290,7 @@ class FileServiceSigned(FileService):
         full_filename = '{}/{}'.format(self.path, filename)
 
         with open(full_filename, 'wb') as file_handler:
-            if sys.version_info[0] < 3:
-                data = bytes(signature)
-            else:
-                data = bytes(signature, 'utf-8')
+            data = bytes(signature)
             file_handler.write(data)
 
         return result
