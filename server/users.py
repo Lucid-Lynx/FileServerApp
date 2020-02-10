@@ -146,6 +146,15 @@ class UsersAPI:
         db_session = db.create_session()
         user = db_session.query(db.User).filter_by(email=email).first()
         assert user and hashed_password == user.password, 'Incorrect login or password'.format(email)
+
+        user_session = db_session.query(db.Session).filter_by(user_id=user.id).first()
+
+        if user_session and user_session.exp_dt >= datetime.now():
+            return user_session.uuid
+
+        elif user_session:
+            db_session.delete(user_session)
+
         user_session = db.Session(user)
         db_session.add(user_session)
         user.last_login_dt = datetime.now()
