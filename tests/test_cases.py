@@ -41,34 +41,36 @@ def create_and_move_to_test_folder():
 def create_test_files():
     full_test_file_1 = '{}/{}'.format(test_folder, test_file_1)
     with open(full_test_file_1, 'wb') as file_handler:
-        data = bytes(test_content, 'utf-8')
+        data = bytes(test_content)
         file_handler.write(data)
 
     full_test_file_2 = '{}/{}'.format(test_folder, test_file_2)
     with open(full_test_file_2, 'wb') as file_handler:
-        data = bytes(test_content, 'utf-8')
+        data = bytes(test_content)
         file_handler.write(data)
 
     full_test_file_3 = '{}/{}'.format(test_folder, test_file_3)
     with open(full_test_file_3, 'wb') as file_handler:
-        data = bytes(test_content, 'utf-8')
+        data = bytes(test_content)
         file_handler.write(data)
 
     full_test_file_4 = '{}/{}'.format(test_folder, test_file_4)
     with open(full_test_file_4, 'wb') as file_handler:
-        data = bytes(test_content, 'utf-8')
+        data = bytes(test_content)
         file_handler.write(data)
 
     full_test_file_7 = '{}/{}'.format(test_folder, test_file_7)
     with open(full_test_file_7, 'wb') as file_handler:
-        data = bytes(test_content, 'utf-8')
+        data = bytes(test_content)
         file_handler.write(data)
 
 
+'''
 @pytest.fixture
 def client(loop, aiohttp_client):
 
     pass
+'''
 
 
 @pytest.fixture(scope='function')
@@ -85,13 +87,13 @@ def prepare_data(request):
     full_test_signature_file_4 = '{}/{}'.format(test_folder, test_signature_file_4)
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict_4.values()))))
     with open(full_test_signature_file_4, 'wb') as file_handler:
-        data = bytes(signature, 'utf-8')
+        data = bytes(signature)
         file_handler.write(data)
 
     cipher = RSACipher(test_folder)
     full_test_file_5 = '{}/{}'.format(test_folder, test_file_5)
     with open(full_test_file_5, 'wb') as file_handler:
-        data = bytes(test_content, 'utf-8')
+        data = bytes(test_content)
         cipher.write_cipher_text(data, file_handler, test_file_5.split('.')[0])
     file_dict = OrderedDict(
         name=test_file_5,
@@ -101,13 +103,13 @@ def prepare_data(request):
     full_test_signature_file_5 = '{}/{}'.format(test_folder, test_signature_file_5)
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict.values()))))
     with open(full_test_signature_file_5, 'wb') as file_handler:
-        data = bytes(signature, 'utf-8')
+        data = bytes(signature)
         file_handler.write(data)
 
     cipher = AESCipher(test_folder)
     full_test_file_6 = '{}/{}'.format(test_folder, test_file_6)
     with open(full_test_file_6, 'wb') as file_handler:
-        data = bytes(test_content, 'utf-8')
+        data = bytes(test_content)
         cipher.write_cipher_text(data, file_handler, test_file_6.split('.')[0])
     file_dict = OrderedDict(
         name=test_file_6,
@@ -117,7 +119,7 @@ def prepare_data(request):
     full_test_signature_file_6 = '{}/{}'.format(test_folder, test_signature_file_6)
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict.values()))))
     with open(full_test_signature_file_6, 'wb') as file_handler:
-        data = bytes(signature, 'utf-8')
+        data = bytes(signature)
         file_handler.write(data)
 
     full_test_file_7 = '{}/{}'.format(test_folder, test_file_7)
@@ -129,7 +131,7 @@ def prepare_data(request):
     full_test_signature_file_7 = '{}/{}'.format(test_folder, test_signature_file_7)
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict_7.values()))))
     with open(full_test_signature_file_7, 'wb') as file_handler:
-        data = bytes(signature, 'utf-8')
+        data = bytes(signature)
         file_handler.write(data)
 
     request.addfinalizer(teardown)
@@ -151,7 +153,7 @@ def teardown():
 
 class TestSuite(object):
 
-    def test_connection(self, client):
+    def test_connection(self):
 
         pass
 
@@ -274,55 +276,55 @@ class TestSuite(object):
         assert not os.path.exists('{}/{}'.format(test_folder, signature_file))
         logger.info('Test is succeeded')
 
-    def test_download_file(self, client, prepare_data):
+    def test_download_file(self, prepare_data):
 
         pass
 
-    def test_download_file_queued(self, client, prepare_data):
+    def test_download_file_queued(self, prepare_data):
 
         pass
 
-    def test_signup(self, client, prepare_data):
+    def test_signup(self, prepare_data):
 
         pass
 
-    def test_signin(self, client, prepare_data):
+    def test_signin(self, prepare_data):
 
         pass
 
-    def test_logout(self, client, prepare_data):
+    def test_logout(self, prepare_data):
 
         pass
 
-    def test_add_method(self, client, prepare_data):
+    def test_add_method(self, prepare_data):
 
         pass
 
-    def test_delete_method(self, client, prepare_data):
+    def test_delete_method(self, prepare_data):
 
         pass
 
-    def test_add_role(self, client, prepare_data):
+    def test_add_role(self, prepare_data):
 
         pass
 
-    def test_delete_role(self, client, prepare_data):
+    def test_delete_role(self, prepare_data):
 
         pass
 
-    def test_add_method_to_role(self, client, prepare_data):
+    def test_add_method_to_role(self, prepare_data):
 
         pass
 
-    def test_delete_method_from_role(self, client, prepare_data):
+    def test_delete_method_from_role(self, prepare_data):
 
         pass
 
-    def test_change_shared_prop(self, client, prepare_data):
+    def test_change_shared_prop(self, prepare_data):
 
         pass
 
-    def test_change_user_role(self, client, prepare_data):
+    def test_change_user_role(self, prepare_data):
 
         pass
 
