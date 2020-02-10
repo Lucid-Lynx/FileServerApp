@@ -171,6 +171,17 @@ class UsersSQLAPI:
                 cursor.execute(sql.SQL('SELECT * FROM public."User" WHERE "Email" = {}').format(sql.Literal(email)))
                 user = cursor.fetchone()
                 assert user and hashed_password == user['Password'], 'Invalid login or password'.format(email)
+                cursor.execute(sql.SQL('SELECT * FROM public."Session" WHERE "user_id" = {}').format(
+                    sql.Literal(user['Id'])))
+                user_session = cursor.fetchone()
+
+                if user_session and user_session['Expiration Date'] >= datetime.now():
+                    return user_session['UUID']
+
+                elif user_session:
+                    cursor.execute(
+                        sql.SQL('DELETE FROM public."Session" WHERE "Id" = {}').format(sql.Literal(user_session['Id'])))
+
                 columns = ("Create Date", "UUID", "Expiration Date", "user_id")
                 values = (datetime.strftime(datetime.now(), dt_format), str(uuid_str),
                           datetime.strftime(datetime.now() + timedelta(

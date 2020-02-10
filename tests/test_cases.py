@@ -114,7 +114,8 @@ def prepare_data(request):
         db.User('user2@test.su', HashAPI.hash_sha512('2test1234'), 'User2', role=test_role_allowed))
     session_no_role = db.Session(
         db.User('user3@test.su', HashAPI.hash_sha512('3test1234'), 'User3'))
-    db_session.add_all([session_denied, session_allowed, session_no_role, test_role_no_user])
+    user_without_session = db.User('user4@test.su', HashAPI.hash_sha512('4test1234'), 'User4')
+    db_session.add_all([session_denied, session_allowed, session_no_role, test_role_no_user, user_without_session])
     db_session.commit()
 
     user = db_session.query(db.User).filter_by(email='user2@test.su').first()
@@ -132,11 +133,11 @@ def prepare_data(request):
         data = bytes(signature, 'utf-8')
         file_handler.write(data)
 
-    cipher = RSACipher(user.id)
+    cipher = RSACipher(user.id, test_folder)
     full_test_file_5 = '{}/{}'.format(test_folder, test_file_5)
     with open(full_test_file_5, 'wb') as file_handler:
         data = bytes(test_content, 'utf-8')
-        cipher.write_cipher_text(data, file_handler)
+        cipher.write_cipher_text(data, file_handler, test_file_5.split('.')[0])
     file_dict = OrderedDict(
         name=test_file_5,
         create_date=utils.convert_date(os.path.getctime(full_test_file_5)),
@@ -149,11 +150,11 @@ def prepare_data(request):
         data = bytes(signature, 'utf-8')
         file_handler.write(data)
 
-    cipher = AESCipher(user.id)
+    cipher = AESCipher(user.id, test_folder)
     full_test_file_6 = '{}/{}'.format(test_folder, test_file_6)
     with open(full_test_file_6, 'wb') as file_handler:
         data = bytes(test_content, 'utf-8')
-        cipher.write_cipher_text(data, file_handler)
+        cipher.write_cipher_text(data, file_handler, test_file_6.split('.')[0])
     file_dict = OrderedDict(
         name=test_file_6,
         create_date=utils.convert_date(os.path.getctime(full_test_file_6)),
@@ -189,7 +190,8 @@ def teardown():
     db = DataBase()
     db_session = db.create_session()
     test_user_no_role = db_session.query(db.User).filter_by(email='user3@test.su').first()
-    test_user = db_session.query(db.User).filter_by(email='user4@test.su').first()
+    test_user_without_session = db_session.query(db.User).filter_by(email='user4@test.su').first()
+    test_user = db_session.query(db.User).filter_by(email='user5@test.su').first()
     test_role_denied = db_session.query(db.Role).filter_by(name='test_role_1').first()
     test_role_allowed = db_session.query(db.Role).filter_by(name='test_role_2').first()
     test_role_no_user = db_session.query(db.Role).filter_by(name='test_role_3').first()
@@ -199,6 +201,9 @@ def teardown():
 
     if test_user_no_role:
         db_session.delete(test_user_no_role)
+
+    if test_user_without_session:
+        db_session.delete(test_user_without_session)
 
     if test_user:
         db_session.delete(test_user)
@@ -929,16 +934,16 @@ class TestSuite:
 
     async def test_signup(self, client, prepare_data):
         client, handler = tuple(client)
-        test_email = 'user4@test.su'
+        test_email = 'user5@test.su'
         db = DataBase()
         db_session = db.create_session()
 
         logger.info('Test request. Method not allowed')
         resp = await client.put('/signup', json={
             'email': test_email,
-            'password': '4test1234',
-            'confirm_password': '4test1234',
-            'name': 'User4',
+            'password': '5test1234',
+            'confirm_password': '5test1234',
+            'name': 'User5',
         })
         assert resp.status == 405
         logger.info('Test is succeeded')
@@ -946,9 +951,9 @@ class TestSuite:
         logger.info('Test request. User does not exist')
         resp = await client.post('/signup', json={
             'email': test_email,
-            'password': '4test1234',
-            'confirm_password': '4test1234',
-            'name': 'User4',
+            'password': '5test1234',
+            'confirm_password': '5test1234',
+            'name': 'User5',
         })
         assert resp.status == 200
         result = json.loads(await resp.text())
@@ -959,9 +964,9 @@ class TestSuite:
 
         logger.info('Test request. Email is not set')
         resp = await client.post('/signup', json={
-            'password': '4test1234',
-            'confirm_password': '4test1234',
-            'name': 'User4',
+            'password': '5test1234',
+            'confirm_password': '5test1234',
+            'name': 'User5',
         })
         assert resp.status == 400
         assert await resp.text() == 'Email is not set'
@@ -969,17 +974,17 @@ class TestSuite:
 
         logger.info('Test request. Invalid email format')
         resp = await client.post('/signup', json={
-            'email': 'user4',
-            'password': '4test1234',
-            'confirm_password': '4test1234',
-            'name': 'User4',
+            'email': 'user5',
+            'password': '5test1234',
+            'confirm_password': '5test1234',
+            'name': 'User5',
         })
         assert resp.status == 400
         assert await resp.text() == 'Invalid email format'
         logger.info('Test is succeeded')
 
         logger.info('Test request. Password is not set')
-        resp = await client.post('/signup', json={'email': test_email, 'name': 'User4'})
+        resp = await client.post('/signup', json={'email': test_email, 'name': 'User5'})
         assert resp.status == 400
         assert await resp.text() == 'Password is not set'
         logger.info('Test is succeeded')
@@ -988,8 +993,8 @@ class TestSuite:
         resp = await client.post('/signup', json={
             'email': test_email,
             'password': 'test',
-            'confirm_password': '4test1234',
-            'name': 'User4',
+            'confirm_password': '5test1234',
+            'name': 'User5',
         })
         assert resp.status == 400
         assert await resp.text() == \
@@ -999,8 +1004,8 @@ class TestSuite:
         logger.info('Test request. Password is not confirmed')
         resp = await client.post('/signup', json={
             'email': test_email,
-            'password': '4test1234',
-            'name': 'User4',
+            'password': '5test1234',
+            'name': 'User5',
         })
         assert resp.status == 400
         assert await resp.text() == 'Please, repeat the password'
@@ -1009,9 +1014,9 @@ class TestSuite:
         logger.info('Test request. Passwords are not match')
         resp = await client.post('/signup', json={
             'email': test_email,
-            'password': '4test1234',
-            'confirm_password': '4test12345',
-            'name': 'User4',
+            'password': '5test1234',
+            'confirm_password': '5test12345',
+            'name': 'User5',
         })
         assert resp.status == 400
         assert await resp.text() == 'Passwords are not match'
@@ -1020,8 +1025,8 @@ class TestSuite:
         logger.info('Test request. Name is not set')
         resp = await client.post('/signup', json={
             'email': test_email,
-            'password': '4test1234',
-            'confirm_password': '4test1234',
+            'password': '5test1234',
+            'confirm_password': '5test1234',
         })
         assert resp.status == 400
         assert await resp.text() == 'Name is not set'
@@ -1031,9 +1036,9 @@ class TestSuite:
         test_email_exists = 'user1@test.su'
         resp = await client.post('/signup', json={
             'email': test_email_exists,
-            'password': '4test1234',
-            'confirm_password': '4test1234',
-            'name': 'User4',
+            'password': '5test1234',
+            'confirm_password': '5test1234',
+            'name': 'User5',
         })
         assert resp.status == 400
         assert await resp.text() == 'User with email {} already exists'.format(test_email_exists)
@@ -1041,6 +1046,7 @@ class TestSuite:
 
     async def test_signin(self, client, prepare_data):
         client, handler = tuple(client)
+        session_denied, session_allowed, session_no_role = tuple(prepare_data)
         test_email = 'user1@test.su'
         db = DataBase()
         db_session = db.create_session()
@@ -1051,14 +1057,15 @@ class TestSuite:
         assert resp.status == 405
         logger.info('Test is succeeded')
 
-        logger.info('Test request. User exists')
+        logger.info('Test request. User exists. Session exists')
         resp = await client.post('/signin', json={'email': test_email, 'password': '1test1234'})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
         assert result.get('message') == 'You successfully signed in system'
+        assert result.get('session_id') == session_denied.uuid
         assert db_session.query(db.Session).filter_by(user=test_user).first()
-        assert len(db_session.query(db.Session).filter_by(user=test_user).all()) > 1
+        assert len(db_session.query(db.Session).filter_by(user=test_user).all()) == 1
         logger.info('Test is succeeded')
 
         logger.info('Test request. Email is not set')
@@ -1086,9 +1093,20 @@ class TestSuite:
         logger.info('Test is succeeded')
 
         logger.info('Test request. User does not exist')
-        resp = await client.post('/signin', json={'email': 'user4@test.su', 'password': 'test'})
+        resp = await client.post('/signin', json={'email': 'user6@test.su', 'password': 'test'})
         assert resp.status == 400
         assert await resp.text() == 'Incorrect login or password'
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. User exists. Session does not exist')
+        test_email = 'user4@test.su'
+        resp = await client.post('/signin', json={'email': test_email, 'password': '4test1234'})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'You successfully signed in system'
+        assert db_session.query(db.Session).filter_by(user=test_user).first()
+        assert len(db_session.query(db.Session).filter_by(user=test_user).all()) == 1
         logger.info('Test is succeeded')
 
     async def test_logout(self, client, prepare_data):
@@ -1698,7 +1716,7 @@ class TestSuite:
         logger.info('Test is succeeded')
 
         logger.info('Test request. Access allowed. User does not exist')
-        test_email_not_exists = 'user4@test.su'
+        test_email_not_exists = 'user6@test.su'
         resp = await client.post(
             '/change_user_role',
             json={'email': test_email_not_exists, 'role': test_role_name},
