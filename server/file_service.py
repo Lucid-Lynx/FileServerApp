@@ -104,9 +104,9 @@ class FileService:
         if not security_level or security_level == 'low':
             cipher = BaseCipher()
         elif security_level == 'medium':
-            cipher = AESCipher()
+            cipher = AESCipher(self.path)
         elif security_level == 'high':
-            cipher = RSACipher()
+            cipher = RSACipher(self.path)
         else:
             raise ValueError('Security level is invalid')
 
@@ -116,7 +116,7 @@ class FileService:
                 create_date=utils.convert_date(os.path.getctime(full_filename)),
                 edit_date=utils.convert_date(os.path.getmtime(full_filename)),
                 size=os.path.getsize(full_filename),
-                content=cipher.decrypt(file_handler).decode('utf-8'))
+                content=cipher.decrypt(file_handler, filename).decode('utf-8'))
 
     async def get_file_data_async(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
         """Get full info about file. Asynchronous version.
@@ -203,16 +203,16 @@ class FileService:
         if not security_level or security_level == 'low':
             cipher = BaseCipher()
         elif security_level == 'medium':
-            cipher = AESCipher()
+            cipher = AESCipher(self.path)
         elif security_level == 'high':
-            cipher = RSACipher()
+            cipher = RSACipher(self.path)
         else:
             raise ValueError('Security level is invalid')
 
         with open(full_filename, 'wb') as file_handler:
             if content:
                 data = bytes(content, 'utf-8')
-                cipher.write_cipher_text(data, file_handler)
+                cipher.write_cipher_text(data, file_handler, filename.split('.')[0])
 
         return OrderedDict(
             name=filename,
