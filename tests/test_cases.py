@@ -93,7 +93,7 @@ def prepare_data(request):
     full_test_file_5 = '{}/{}'.format(test_folder, test_file_5)
     with open(full_test_file_5, 'wb') as file_handler:
         data = bytes(test_content, 'utf-8')
-        cipher.write_cipher_text(data, file_handler, test_file_5)
+        cipher.write_cipher_text(data, file_handler, test_file_5.split('.')[0])
     file_dict = OrderedDict(
         name=test_file_5,
         create_date=utils.convert_date(os.path.getctime(full_test_file_5)),
@@ -109,7 +109,7 @@ def prepare_data(request):
     full_test_file_6 = '{}/{}'.format(test_folder, test_file_6)
     with open(full_test_file_6, 'wb') as file_handler:
         data = bytes(test_content, 'utf-8')
-        cipher.write_cipher_text(data, file_handler, test_file_6)
+        cipher.write_cipher_text(data, file_handler, test_file_6.split('.')[0])
     file_dict = OrderedDict(
         name=test_file_6,
         create_date=utils.convert_date(os.path.getctime(full_test_file_6)),
