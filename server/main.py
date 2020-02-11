@@ -7,7 +7,7 @@ import sys
 import logging
 import json
 from aiohttp import web
-# from server.handler import Handler
+from server.handler import Handler
 # from server.database import DataBase
 from server.file_service import FileService, FileServiceSigned
 import server.file_service_no_class as FileServiceNoClass
@@ -155,61 +155,28 @@ def main():
 
     Get and parse command line parameters and configure web app.
     Command line options:
+    -p --port - port (default: 8080).
     -f --folder - working directory (absolute or relative path, default: current app folder FileServer).
+    -i --init - initialize database.
     -h --help - help.
 
     """
 
     parser = commandline_parser()
     namespace = parser.parse_args(sys.argv[1:])
-    path = namespace.folder
 
-    print('Commands:')
-    print('list - get files list')
-    print('get - get file data')
-    print('create - create file')
-    print('delete - delete file')
-    print('chdir - change working directory')
-    print('exit - exit from app')
-    print('\n')
-
-    while True:
-
-        try:
-            print('Input command:')
-            command = input()
-
-            if command == 'list':
-                data = FileService(path=path).get_files()
-
-            elif command == 'get':
-                data = get_file_data(path)
-
-            elif command == 'create':
-                data = create_file(path)
-
-            elif command == 'delete':
-                data = delete_file(path)
-
-            elif command == 'chdir':
-                data = change_dir(path)
-
-            elif command == 'exit':
-                return
-
-            else:
-                raise ValueError('Invalid command')
-
-            print('\n{}\n'.format({
-                'status': 'success',
-                'result': json.dumps(data, indent=4),
-            }))
-
-        except (ValueError, AssertionError) as err:
-            print('\n{}\n'.format({
-                'status': 'error',
-                'message': err.message if sys.version_info[0] < 3 else err,
-            }))
+    handler = Handler(namespace.folder)
+    app = web.Application()
+    app.add_routes([
+        web.get('/', handler.handle),
+        web.get('/files/list', handler.get_files),
+        web.get('/files', handler.get_file_info),
+        web.post('/files', handler.create_file),
+        web.delete('/files/{filename}', handler.delete_file),
+        web.post('/change_file_dir', handler.change_file_dir),
+    ])
+    logging.basicConfig(level=logging.INFO)
+    web.run_app(app, port=namespace.port)
 
 
 if __name__ == '__main__':

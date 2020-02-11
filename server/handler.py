@@ -6,11 +6,11 @@ from aiohttp import web
 from queue import Queue
 from distutils.util import strtobool
 from server.file_service import FileService, FileServiceSigned
-from server.file_loader import FileLoader, QueuedLoader
-from server.users import UsersAPI
-from server.role_model import RoleModel
-from server.users_sql import UsersSQLAPI
-from server.role_model_sql import RoleModelSQL
+# from server.file_loader import FileLoader, QueuedLoader
+# from server.users import UsersAPI
+# from server.role_model import RoleModel
+# from server.users_sql import UsersSQLAPI
+# from server.role_model_sql import RoleModelSQL
 
 
 class Handler:
@@ -21,11 +21,6 @@ class Handler:
     def __init__(self, path: str):
         self.file_service = FileService(path=path)
         self.file_service_signed = FileServiceSigned(path=path)
-        self.queue = Queue()
-
-        for i in range(2):
-            thread = QueuedLoader(self.queue)
-            thread.start()
 
     async def handle(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Basic coroutine for connection testing.
