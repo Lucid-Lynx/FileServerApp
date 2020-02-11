@@ -69,11 +69,12 @@ class BaseCipher:
 
         pass
 
-    def decrypt(self, input_file: BinaryIO) -> bytes:
+    def decrypt(self, input_file: BinaryIO, filename: str) -> bytes:
         """Decrypt data.
 
         Args:
-            input_file (BinaryIO): Input file with data for decrypting.
+            input_file (BinaryIO): Input file with data for decrypting,
+            filename (str): Input filename without extension.
 
         Returns:
             Bytes with decrypted data.
@@ -82,12 +83,13 @@ class BaseCipher:
 
         pass
 
-    def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+    def write_cipher_text(self, data: bytes, out_file: BinaryIO, filename: str):
         """Encrypt data and write cipher text into output file.
 
         Args:
             data (bytes): Encrypted data,
-            out_file(BinaryIO): Output file.
+            out_file(BinaryIO): Output file,
+            filename (str): Output filename without extension.
 
         """
 
@@ -99,7 +101,7 @@ class AESCipher(BaseCipher):
 
     """
 
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, file_folder: str):
         pass
 
     def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes, bytes]:
@@ -115,11 +117,12 @@ class AESCipher(BaseCipher):
 
         pass
 
-    def decrypt(self, input_file: BinaryIO) -> bytes:
+    def decrypt(self, input_file: BinaryIO, filename: str) -> bytes:
         """Decrypt data.
 
         Args:
-            input_file (BinaryIO): Input file with data for decrypting.
+            input_file (BinaryIO): Input file with data for decrypting,
+            filename (str): Input filename without extension.
 
         Returns:
             Bytes with decrypted data.
@@ -145,12 +148,13 @@ class AESCipher(BaseCipher):
 
         pass
 
-    def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+    def write_cipher_text(self, data: bytes, out_file: BinaryIO, filename: str):
         """Encrypt data and write cipher text into output file.
 
         Args:
             data (bytes): Encrypted data,
-            out_file(BinaryIO): Output file.
+            out_file(BinaryIO): Output file,
+            filename (str): Output filename without extension.
 
         """
 
@@ -162,7 +166,7 @@ class RSACipher(AESCipher):
 
     """
 
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, file_folder: str):
         pass
 
     def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes, bytes]:
@@ -178,11 +182,12 @@ class RSACipher(AESCipher):
 
         pass
 
-    def decrypt(self, input_file: BinaryIO) -> bytes:
+    def decrypt(self, input_file: BinaryIO, filename: str) -> bytes:
         """Decrypt data.
 
         Args:
-            input_file (BinaryIO): Input file with data for decrypting.
+            input_file (BinaryIO): Input file with data for decrypting,
+            filename (str): Input filename without extension.
 
         Returns:
             Bytes with decrypted data.
@@ -191,12 +196,13 @@ class RSACipher(AESCipher):
 
         pass
 
-    def write_cipher_text(self, data: bytes, out_file: BinaryIO):
+    def write_cipher_text(self, data: bytes, out_file: BinaryIO, filename: str):
         """Encrypt data and write cipher text into output file.
 
         Args:
             data (bytes): Encrypted data,
-            out_file(BinaryIO): Output file.
+            out_file(BinaryIO): Output file,
+            filename (str): Output filename without extension.
 
         """
 
