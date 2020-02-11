@@ -147,8 +147,14 @@ def prepare_data(request):
 
 
 def teardown():
+    test_key_file_5 = '{}/{}.{}'.format(test_folder, test_file_5.split('.')[0], 'bin')
+    test_key_file_6 = '{}/{}.{}'.format(test_folder, test_file_6.split('.')[0], 'bin')
 
-    pass
+    if os.path.exists(test_key_file_5):
+        os.remove(test_key_file_5)
+
+    if os.path.exists(test_key_file_6):
+        os.remove(test_key_file_6)
 
 
 class TestSuite:
