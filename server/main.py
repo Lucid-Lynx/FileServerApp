@@ -13,7 +13,7 @@ from server.file_service import FileService, FileServiceSigned
 import server.file_service_no_class as FileServiceNoClass
 
 
-def commandline_parser():
+def commandline_parser() -> argparse.ArgumentParser:
     """Command line parser.
 
     Parse port and working directory parameters from command line.
@@ -21,6 +21,7 @@ def commandline_parser():
     """
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--port', default='8080', help='port (default: 8080)')
     parser.add_argument(
         '-f', '--folder', default=os.getcwd(),
         help='working directory (absolute or relative path, default: current app folder FileServer)')
