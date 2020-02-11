@@ -203,7 +203,7 @@ class TestSuite:
 
     async def test_get_files(self, client, prepare_data):
         client, handler = tuple(client)
-        session = tuple(prepare_data)
+        session = prepare_data
 
         logger.info('Test request. Method not allowed')
         resp = await client.put('/files/list')
@@ -245,7 +245,7 @@ class TestSuite:
 
     async def test_get_file_info(self, client, prepare_data):
         client, handler = tuple(client)
-        session = tuple(prepare_data)
+        session = prepare_data
         test_file_part = test_file_4.split('.')[0]
 
         logger.info('Test request. Method not allowed')
@@ -428,7 +428,7 @@ class TestSuite:
 
     async def test_create_file(self, client, prepare_data):
         client, handler = tuple(client)
-        session = tuple(prepare_data)
+        session = prepare_data
 
         logger.info('Test request. Method not allowed')
         resp = await client.put('/files', json={'content': test_content, 'security_level': 'high'})
@@ -535,7 +535,7 @@ class TestSuite:
 
     async def test_delete_file(self, client, prepare_data):
         client, handler = tuple(client)
-        session = tuple(prepare_data)
+        session = prepare_data
         test_file_part = test_file_2.split('.')[0]
 
         logger.info('Test request. Method not allowed')
@@ -696,36 +696,36 @@ class TestSuite:
 
     async def test_signin(self, client, prepare_data):
         client, handler = tuple(client)
-        session_denied, session_allowed, session_no_role = tuple(prepare_data)
-        test_email = 'user1@test.su'
+        session = prepare_data
+        test_email = 'user2@test.su'
         db = DataBase()
         db_session = db.create_session()
         test_user = db_session.query(db.User).filter_by(email=test_email).first()
 
         logger.info('Test request. Method not allowed')
-        resp = await client.put('/signin', json={'email': test_email, 'password': '1test1234'})
+        resp = await client.put('/signin', json={'email': test_email, 'password': '2test1234'})
         assert resp.status == 405
         logger.info('Test is succeeded')
 
         logger.info('Test request. User exists. Session exists')
-        resp = await client.post('/signin', json={'email': test_email, 'password': '1test1234'})
+        resp = await client.post('/signin', json={'email': test_email, 'password': '2test1234'})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
         assert result.get('message') == 'You successfully signed in system'
-        assert result.get('session_id') == session_denied.uuid
+        assert result.get('session_id') == session.uuid
         assert db_session.query(db.Session).filter_by(user=test_user).first()
         assert len(db_session.query(db.Session).filter_by(user=test_user).all()) == 1
         logger.info('Test is succeeded')
 
         logger.info('Test request. Email is not set')
-        resp = await client.post('/signin', json={'password': '1test1234'})
+        resp = await client.post('/signin', json={'password': '2test1234'})
         assert resp.status == 400
         assert await resp.text() == 'Email is not set'
         logger.info('Test is succeeded')
 
         logger.info('Test request. Invalid email format')
-        resp = await client.post('/signin', json={'email': 'user1', 'password': '1test1234'})
+        resp = await client.post('/signin', json={'email': 'user1', 'password': '2test1234'})
         assert resp.status == 400
         assert await resp.text() == 'Invalid email format'
         logger.info('Test is succeeded')
@@ -761,7 +761,7 @@ class TestSuite:
 
     async def test_logout(self, client, prepare_data):
         client, handler = tuple(client)
-        session_denied, session_allowed, session_no_role = tuple(prepare_data)
+        session = prepare_data
         db = DataBase()
         db_session = db.create_session()
 
@@ -777,12 +777,12 @@ class TestSuite:
         logger.info('Test is succeeded')
 
         logger.info('Test request. User is logged in')
-        resp = await client.get('/logout', headers={'Authorization': session_denied.uuid})
+        resp = await client.get('/logout', headers={'Authorization': session.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'
         assert result.get('message') == 'You successfully logged out'
-        assert not db_session.query(db.Session).filter_by(uuid=session_denied.uuid).first()
+        assert not db_session.query(db.Session).filter_by(uuid=session.uuid).first()
         logger.info('Test is succeeded')
 
     async def test_add_method(self, client, prepare_data):
@@ -819,7 +819,7 @@ class TestSuite:
 
     async def test_change_file_dir(self, client, prepare_data):
         client, handler = tuple(client)
-        session_denied, session_allowed, session_no_role = tuple(prepare_data)
+        session = prepare_data
         new_test_folder = '../test_folder_2'
 
         logger.info('Test request. Method not allowed')
@@ -839,29 +839,15 @@ class TestSuite:
         assert await resp.text() == 'Session expired. Please, sign in again'
         logger.info('Test is succeeded')
 
-        logger.info('Test request. Access denied')
-        resp = await client.post(
-            '/change_file_dir', json={'path': new_test_folder}, headers={'Authorization': session_denied.uuid})
-        assert resp.status == 403
-        assert await resp.text() == 'Access denied'
-        logger.info('Test is succeeded')
-
-        logger.info('Test request. User without role')
-        resp = await client.post(
-            '/change_file_dir', json={'path': new_test_folder}, headers={'Authorization': session_no_role.uuid})
-        assert resp.status == 403
-        assert await resp.text() == 'User is not attached to role'
-        logger.info('Test is succeeded')
-
-        logger.info('Test request. Access allowed. Directory path is not set')
-        resp = await client.post('/change_file_dir', json={}, headers={'Authorization': session_allowed.uuid})
+        logger.info('Test request. Directory path is not set')
+        resp = await client.post('/change_file_dir', json={}, headers={'Authorization': session.uuid})
         assert resp.status == 400
         assert await resp.text() == 'Directory path is not set'
         logger.info('Test is succeeded')
 
-        logger.info('Test request. Access allowed. Directory path is set')
+        logger.info('Test request. Directory path is set')
         resp = await client.post(
-            '/change_file_dir', json={'path': new_test_folder}, headers={'Authorization': session_allowed.uuid})
+            '/change_file_dir', json={'path': new_test_folder}, headers={'Authorization': session.uuid})
         assert resp.status == 200
         result = json.loads(await resp.text())
         assert result.get('status') == 'success'

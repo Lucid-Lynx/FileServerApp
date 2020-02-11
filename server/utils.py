@@ -13,8 +13,12 @@ class SingletonMeta(type):
 
     """
 
+    __instance = None
+
     def __call__(cls):
-        pass
+        if not isinstance(cls.__instance, cls):
+            cls.__instance = super().__call__()
+        return cls.__instance
 
 
 def generate_string():
