@@ -2,6 +2,7 @@
 # All rights reserved.
 
 import os
+import sys
 import pytest
 import json
 import logging
@@ -41,27 +42,52 @@ def create_and_move_to_test_folder():
 def create_test_files():
     full_test_file_1 = '{}/{}'.format(test_folder, test_file_1)
     with open(full_test_file_1, 'wb') as file_handler:
-        data = bytes(test_content)
+
+        if sys.version_info[0] < 3:
+            data = bytes(test_content)
+        else:
+            data = bytes(test_content, 'utf-8')
+
         file_handler.write(data)
 
     full_test_file_2 = '{}/{}'.format(test_folder, test_file_2)
     with open(full_test_file_2, 'wb') as file_handler:
-        data = bytes(test_content)
+
+        if sys.version_info[0] < 3:
+            data = bytes(test_content)
+        else:
+            data = bytes(test_content, 'utf-8')
+
         file_handler.write(data)
 
     full_test_file_3 = '{}/{}'.format(test_folder, test_file_3)
     with open(full_test_file_3, 'wb') as file_handler:
-        data = bytes(test_content)
+
+        if sys.version_info[0] < 3:
+            data = bytes(test_content)
+        else:
+            data = bytes(test_content, 'utf-8')
+
         file_handler.write(data)
 
     full_test_file_4 = '{}/{}'.format(test_folder, test_file_4)
     with open(full_test_file_4, 'wb') as file_handler:
-        data = bytes(test_content)
+
+        if sys.version_info[0] < 3:
+            data = bytes(test_content)
+        else:
+            data = bytes(test_content, 'utf-8')
+
         file_handler.write(data)
 
     full_test_file_7 = '{}/{}'.format(test_folder, test_file_7)
     with open(full_test_file_7, 'wb') as file_handler:
-        data = bytes(test_content)
+
+        if sys.version_info[0] < 3:
+            data = bytes(test_content)
+        else:
+            data = bytes(test_content, 'utf-8')
+
         file_handler.write(data)
 
 
@@ -87,14 +113,25 @@ def prepare_data(request):
     full_test_signature_file_4 = '{}/{}'.format(test_folder, test_signature_file_4)
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict_4.values()))))
     with open(full_test_signature_file_4, 'wb') as file_handler:
-        data = bytes(signature)
+
+        if sys.version_info[0] < 3:
+            data = bytes(signature)
+        else:
+            data = bytes(signature, 'utf-8')
+
         file_handler.write(data)
 
     cipher = RSACipher(test_folder)
     full_test_file_5 = '{}/{}'.format(test_folder, test_file_5)
     with open(full_test_file_5, 'wb') as file_handler:
-        data = bytes(test_content)
+
+        if sys.version_info[0] < 3:
+            data = bytes(test_content)
+        else:
+            data = bytes(test_content, 'utf-8')
+
         cipher.write_cipher_text(data, file_handler, test_file_5.split('.')[0])
+
     file_dict = OrderedDict(
         name=test_file_5,
         create_date=utils.convert_date(os.path.getctime(full_test_file_5)),
@@ -103,14 +140,25 @@ def prepare_data(request):
     full_test_signature_file_5 = '{}/{}'.format(test_folder, test_signature_file_5)
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict.values()))))
     with open(full_test_signature_file_5, 'wb') as file_handler:
-        data = bytes(signature)
+
+        if sys.version_info[0] < 3:
+            data = bytes(signature)
+        else:
+            data = bytes(signature, 'utf-8')
+
         file_handler.write(data)
 
     cipher = AESCipher(test_folder)
     full_test_file_6 = '{}/{}'.format(test_folder, test_file_6)
     with open(full_test_file_6, 'wb') as file_handler:
-        data = bytes(test_content)
+
+        if sys.version_info[0] < 3:
+            data = bytes(test_content)
+        else:
+            data = bytes(test_content, 'utf-8')
+
         cipher.write_cipher_text(data, file_handler, test_file_6.split('.')[0])
+
     file_dict = OrderedDict(
         name=test_file_6,
         create_date=utils.convert_date(os.path.getctime(full_test_file_6)),
@@ -119,7 +167,12 @@ def prepare_data(request):
     full_test_signature_file_6 = '{}/{}'.format(test_folder, test_signature_file_6)
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict.values()))))
     with open(full_test_signature_file_6, 'wb') as file_handler:
-        data = bytes(signature)
+
+        if sys.version_info[0] < 3:
+            data = bytes(signature)
+        else:
+            data = bytes(signature, 'utf-8')
+
         file_handler.write(data)
 
     full_test_file_7 = '{}/{}'.format(test_folder, test_file_7)
@@ -131,7 +184,12 @@ def prepare_data(request):
     full_test_signature_file_7 = '{}/{}'.format(test_folder, test_signature_file_7)
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict_7.values()))))
     with open(full_test_signature_file_7, 'wb') as file_handler:
-        data = bytes(signature)
+
+        if sys.version_info[0] < 3:
+            data = bytes(signature)
+        else:
+            data = bytes(signature, 'utf-8')
+
         file_handler.write(data)
 
     request.addfinalizer(teardown)

@@ -1,7 +1,6 @@
 # Copyright 2019 by Kirill Kanin.
 # All rights reserved.
 
-from builtins import object
 import os
 import hashlib
 from Crypto.PublicKey import RSA
