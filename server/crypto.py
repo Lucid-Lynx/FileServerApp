@@ -108,8 +108,9 @@ class AESCipher(BaseCipher):
 
     """
 
-    def __init__(self, file_folder: str):
+    def __init__(self, user_id: int, file_folder: str):
         super().__init__()
+        self.user_id = user_id
         self.file_folder = file_folder
 
     def encrypt(self, data: bytes) -> Tuple[bytes, bytes, bytes, bytes]:
@@ -142,7 +143,7 @@ class AESCipher(BaseCipher):
         """
 
         nonce, tag, cipher_text = [input_file.read(x) for x in (16, 16, -1)]
-        session_key_file = '{}/{}.bin'.format(self.file_folder, filename)
+        session_key_file = '{}/{}_{}.bin'.format(self.file_folder, self.user_id, filename)
         session_key = open(session_key_file, 'rb').read()
 
         return self.decrypt_aes_data(cipher_text, tag, nonce, session_key)
@@ -178,7 +179,7 @@ class AESCipher(BaseCipher):
         """
 
         cipher_text, tag, nonce, session_key = self.encrypt(data)
-        session_key_file = '{}/{}.bin'.format(self.file_folder, filename)
+        session_key_file = '{}/{}_{}.bin'.format(self.file_folder, self.user_id, filename)
 
         if not os.path.exists(session_key_file):
             with open(session_key_file, 'wb') as f:
@@ -197,13 +198,13 @@ class RSACipher(AESCipher):
     code = os.environ['CRYPTO_CODE']
     key_protection = 'scryptAndAES128-CBC'
 
-    def __init__(self, file_folder: str):
-        super().__init__(file_folder)
+    def __init__(self, user_id: int, file_folder: str):
+        super().__init__(user_id, file_folder)
         key = RSA.generate(2048)
         encrypted_key = key.export_key(passphrase=self.code, pkcs=8, protection=self.key_protection)
 
-        self.private_key_file = '{}/private_rsa_key.bin'.format(key_folder)
-        self.public_key_file = '{}/public_rsa_key.pem'.format(key_folder)
+        self.private_key_file = '{}/{}_private_rsa_key.bin'.format(key_folder, self.user_id)
+        self.public_key_file = '{}/{}_public_rsa_key.pem'.format(key_folder, self.user_id)
 
         if not os.path.exists(self.private_key_file):
             with open(self.private_key_file, 'wb') as f:
@@ -247,7 +248,7 @@ class RSACipher(AESCipher):
         private_key = RSA.import_key(open(self.private_key_file).read(), passphrase=self.code)
         nonce, tag, cipher_text = [input_file.read(x) for x in (16, 16, -1)]
         cipher_rsa = PKCS1_OAEP.new(private_key)
-        session_key_file = '{}/{}.bin'.format(self.file_folder, filename)
+        session_key_file = '{}/{}_{}.bin'.format(self.file_folder, self.user_id, filename)
         enc_session_key = open(session_key_file, 'rb').read()
         session_key = cipher_rsa.decrypt(enc_session_key)
 
@@ -264,7 +265,7 @@ class RSACipher(AESCipher):
         """
 
         cipher_text, tag, nonce, session_key = self.encrypt(data)
-        session_key_file = '{}/{}.bin'.format(self.file_folder, filename)
+        session_key_file = '{}/{}_{}.bin'.format(self.file_folder, self.user_id, filename)
 
         if not os.path.exists(session_key_file):
             with open(session_key_file, 'wb') as f:
