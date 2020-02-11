@@ -25,7 +25,6 @@ def commandline_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '-f', '--folder', default=os.getcwd(),
         help='working directory (absolute or relative path, default: current app folder FileServer)')
-    parser.add_argument('-i', '--init', action='store_true', help='initialize database')
 
     return parser
 
@@ -158,7 +157,6 @@ def main():
     Command line options:
     -p --port - port (default: 8080).
     -f --folder - working directory (absolute or relative path, default: current app folder FileServer).
-    -i --init - initialize database.
     -h --help - help.
 
     """
