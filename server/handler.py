@@ -86,8 +86,7 @@ class Handler:
             else:
                 file_service = self.file_service
 
-            result = await file_service.get_file_data_async(filename, kwargs.get('user_id'))
-            result.pop('user_id')
+            result = await file_service.get_file_data_async(filename)
             result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
@@ -142,8 +141,7 @@ class Handler:
                 file_service = self.file_service
 
             result = \
-                await file_service.create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
-            result.pop('user_id')
+                await file_service.create_file(data.get('content'), data.get('security_level'))
             result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
