@@ -170,7 +170,7 @@ class UsersSQLAPI:
             with conn.cursor(cursor_factory=DictCursor) as cursor:
                 cursor.execute(sql.SQL('SELECT * FROM public."User" WHERE "Email" = {}').format(sql.Literal(email)))
                 user = cursor.fetchone()
-                assert user and hashed_password == user['Password'], 'Invalid login or password'.format(email)
+                assert user and hashed_password == user['Password'], 'Incorrect login or password'.format(email)
                 cursor.execute(sql.SQL('SELECT * FROM public."Session" WHERE "user_id" = {}').format(
                     sql.Literal(user['Id'])))
                 user_session = cursor.fetchone()
