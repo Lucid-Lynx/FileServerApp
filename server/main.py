@@ -8,6 +8,8 @@ import logging
 from aiohttp import web
 from server.handler import Handler
 from server.database import DataBase
+from server.file_service import FileService, FileServiceSigned
+import server.file_service_no_class as FileServiceNoClass
 
 
 def commandline_parser() -> argparse.ArgumentParser:
