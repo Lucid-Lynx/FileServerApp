@@ -6,7 +6,7 @@ from aiohttp import web
 from queue import Queue
 from distutils.util import strtobool
 from server.file_service import FileService, FileServiceSigned
-# from server.file_loader import FileLoader, QueuedLoader
+from server.file_loader import FileLoader, QueuedLoader
 from server.users import UsersAPI
 from server.role_model import RoleModel
 from server.users_sql import UsersSQLAPI
@@ -21,6 +21,11 @@ class Handler:
     def __init__(self, path: str):
         self.file_service = FileService(path=path)
         self.file_service_signed = FileServiceSigned(path=path)
+        self.queue = Queue()
+
+        for i in range(2):
+            thread = QueuedLoader(self.queue)
+            thread.start()
 
     async def handle(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Basic coroutine for connection testing.
@@ -183,8 +188,8 @@ class Handler:
         except AssertionError as err:
             raise web.HTTPBadRequest(text='{}'.format(err))
 
-    # @UsersAPI.authorized
-    # @RoleModel.role_model
+    @UsersAPI.authorized
+    @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
     async def download_file(self, request: web.Request, *args, **kwargs) -> web.Response:
@@ -201,10 +206,30 @@ class Handler:
 
         """
 
-        pass
+        try:
+            filename = request.rel_url.query['filename']
+            is_signed = request.rel_url.query['is_signed']
+            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+            is_signed = strtobool(is_signed)
 
-    # @UsersAPI.authorized
-    # @RoleModel.role_model
+            thread = FileLoader(filename, kwargs.get('user_id'), is_signed)
+            thread.start()
+            thread.join()
+            assert thread.state == 'finished', thread.message
+
+            return web.json_response(data={
+                'status': 'success',
+                'message': thread.message,
+            })
+
+        except AssertionError as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
+
+        except KeyError as err:
+            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+
+    @UsersAPI.authorized
+    @RoleModel.role_model
     # @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
     async def download_file_queued(self, request: web.Request, *args, **kwargs) -> web.Response:
@@ -221,7 +246,28 @@ class Handler:
 
         """
 
-        pass
+        try:
+            filename = request.rel_url.query['filename']
+            is_signed = request.rel_url.query['is_signed']
+            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+            is_signed = strtobool(is_signed)
+            self.queue.put({
+                'filename': filename,
+                'is_signed': is_signed,
+                'user_id': kwargs.get('user_id'),
+            })
+
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'Request for downloading file {}.{} is successfully added into queue'.format(
+                    filename, self.file_service.extension),
+            })
+
+        except AssertionError as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
+
+        except KeyError as err:
+            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
 
     async def signup(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing up user.
