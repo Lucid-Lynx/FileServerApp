@@ -174,6 +174,9 @@ def main():
         web.get('/files', handler.get_file_info),
         web.post('/files', handler.create_file),
         web.delete('/files/{filename}', handler.delete_file),
+        web.post('/signup', handler.signup),
+        web.post('/signin', handler.signin),
+        web.get('/logout', handler.logout),
         web.post('/change_file_dir', handler.change_file_dir),
     ])
     logging.basicConfig(level=logging.INFO)
