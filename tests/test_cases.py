@@ -8,8 +8,8 @@ import logging
 import server.utils as utils
 from collections import OrderedDict
 from aiohttp import web
-# from server.handler import Handler
-# from server.database import DataBase
+from server.handler import Handler
+from server.database import DataBase
 from server.crypto import HashAPI, AESCipher, RSACipher
 from server.file_service import FileService, FileServiceSigned
 import server.file_service_no_class as FileServiceNoClass
@@ -68,15 +68,23 @@ def create_test_files():
 
 @pytest.fixture
 def client(loop, aiohttp_client):
+    create_and_move_to_test_folder()
+    create_test_files()
 
-    pass
+    handler = Handler(test_folder)
+    app = web.Application()
+    app.router.add_get('/', handler.handle)
+    app.router.add_get('/files/list', handler.get_files)
+    app.router.add_get('/files', handler.get_file_info)
+    app.router.add_post('/files', handler.create_file)
+    app.router.add_delete('/files/{filename}', handler.delete_file)
+    app.router.add_post('/change_file_dir', handler.change_file_dir)
+
+    return loop.run_until_complete(aiohttp_client(app)), handler
 
 
 @pytest.fixture(scope='function')
 def prepare_data(request):
-    create_and_move_to_test_folder()
-    create_test_files()
-
     full_test_file_4 = '{}/{}'.format(test_folder, test_file_4)
     file_dict_4 = OrderedDict(
         name=test_file_4,
@@ -140,26 +148,40 @@ def prepare_data(request):
 
 def teardown():
 
-    test_key_file_5 = '{}/{}.{}'.format(test_folder, test_file_5.split('.')[0], 'bin')
-    test_key_file_6 = '{}/{}.{}'.format(test_folder, test_file_6.split('.')[0], 'bin')
-
-    if os.path.exists(test_key_file_5):
-        os.remove(test_key_file_5)
-
-    if os.path.exists(test_key_file_6):
-        os.remove(test_key_file_6)
+    pass
 
 
 class TestSuite:
 
     async def test_connection(self, client):
+        client, handler = tuple(client)
 
-        pass
+        logger.info('Test request. Method not allowed')
+        resp = await client.put('/')
+        assert resp.status == 405
+        logger.info('Test is succeeded')
 
-    def test_get_files(self, prepare_data):
+        logger.info('Test request')
+        resp = await client.get('/')
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        logger.info('Test is succeeded')
 
-        logger.info('Test request. Access allowed')
-        data = FileService(path=test_folder).get_files()
+    async def test_get_files(self, client, prepare_data):
+        client, handler = tuple(client)
+
+        logger.info('Test request. Method not allowed')
+        resp = await client.put('/files/list')
+        assert resp.status == 405
+        logger.info('Test is succeeded')
+
+        logger.info('Test request')
+        resp = await client.get('/files/list')
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        data = result.get('data')
         exists_files = list(filter(
             lambda file: file.get('name') in [
                 test_file_1, test_file_2, test_file_3, test_file_4, test_file_5, test_file_6, test_file_7], data))
@@ -175,104 +197,230 @@ class TestSuite:
         assert not (test_file_8 in exists_files)
         logger.info('Test is succeeded')
 
-    def test_get_file_info(self, prepare_data):
+    async def test_get_file_info(self, client, prepare_data):
+        client, handler = tuple(client)
         test_file_part = test_file_4.split('.')[0]
 
+        logger.info('Test request. Method not allowed')
+        resp = await client.put('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
+        assert resp.status == 405
+        logger.info('Test is succeeded')
+
         logger.info('Test request. File exists. Security level is low')
-        data = FileService(path=test_folder).get_file_data(test_file_part)
-        filename = data.get('name')
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         assert filename == test_file_4
-        content = data.get('content')
+        content = result.get('data').get('content')
         assert content == test_content
         logger.info('Test is succeeded')
 
         logger.info('Test request. File exists. Security level is high')
         test_file_part = test_file_5.split('.')[0]
-        data = FileService(path=test_folder).get_file_data(test_file_part)
-        filename = data.get('name')
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         assert filename == test_file_5
-        content = data.get('content')
+        content = result.get('data').get('content')
         assert content == test_content
         logger.info('Test is succeeded')
 
         logger.info('Test request. File exists. Security level is medium')
         test_file_part = test_file_6.split('.')[0]
-        data = FileService(path=test_folder).get_file_data(test_file_part)
-        filename = data.get('name')
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         assert filename == test_file_6
-        content = data.get('content')
+        content = result.get('data').get('content')
         assert content == test_content
         logger.info('Test is succeeded')
 
         logger.info('Test request. File exists. Security level is low. Signatures are match')
         test_file_part = test_file_4.split('.')[0]
-        data = FileServiceSigned(path=test_folder).get_file_data(test_file_part)
-        filename = data.get('name')
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'true'))
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         assert filename == test_file_4
-        content = data.get('content')
+        content = result.get('data').get('content')
         assert content == test_content
         logger.info('Test is succeeded')
 
         logger.info('Test request. File exists. Security level is high. Signatures are match')
         test_file_part = test_file_5.split('.')[0]
-        data = FileServiceSigned(path=test_folder).get_file_data(test_file_part)
-        filename = data.get('name')
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'true'))
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         assert filename == test_file_5
-        content = data.get('content')
+        content = result.get('data').get('content')
         assert content == test_content
         logger.info('Test is succeeded')
 
         logger.info('Test request. File exists. Security level is medium. Signatures are match')
         test_file_part = test_file_6.split('.')[0]
-        data = FileServiceSigned(path=test_folder).get_file_data(test_file_part)
-        filename = data.get('name')
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'true'))
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         assert filename == test_file_6
-        content = data.get('content')
+        content = result.get('data').get('content')
         assert content == test_content
         logger.info('Test is succeeded')
 
-    def test_create_file(self, prepare_data):
+        logger.info('Test request. Security level is invalid')
+        test_file_part = test_file_2.split('.')[0]
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
+        assert resp.status == 400
+        assert await resp.text() == 'Security level is invalid'
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. File name is invalid')
+        test_file_part = test_file_3.split('.')[0]
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
+        assert resp.status == 400
+        assert await resp.text() == 'Invalid format of file name'
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. File does not exist')
+        test_file_part = test_file_8.split('.')[0]
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'false'))
+        assert resp.status == 400
+        assert await resp.text() == 'File {} does not exist'.format(test_file_8)
+        assert not os.path.exists('{}/{}'.format(test_folder, test_file_8))
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. Signature file does not exist')
+        test_file_part = test_file_1.split('.')[0]
+        signature_file = '{}.{}'.format(test_file_part, 'md5')
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'true'))
+        assert resp.status == 400
+        assert await resp.text() == 'Signature file {} does not exist'.format(signature_file)
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. Signatures are not match')
+        test_file_part = test_file_7.split('.')[0]
+        resp = await client.get('/files?filename={}&is_signed={}'.format(test_file_part, 'true'))
+        assert resp.status == 400
+        assert await resp.text() == 'Signatures are not match'
+        logger.info('Test is succeeded')
+
+    async def test_create_file(self, client, prepare_data):
+        client, handler = tuple(client)
+
+        logger.info('Test request. Method not allowed')
+        resp = await client.put('/files', json={'content': test_content, 'security_level': 'high'})
+        assert resp.status == 405
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. Access allowed. Security level is invalid')
+        resp = await client.post('/files', json={'content': test_content, 'security_level': 'test'})
+        assert resp.status == 400
+        assert await resp.text() == 'Security level is invalid'
+        logger.info('Test is succeeded')
+
         logger.info(
-            'Test request. Access allowed. Content is not empty. Security level is not empty. File is not signed')
-        data = FileService(path=test_folder).create_file(content=test_content, security_level='high')
-        filename = data.get('name')
+            'Test request. Content is not empty. Security level is not empty. File is not signed')
+        resp = await client.post(
+            '/files', json={'content': test_content, 'security_level': 'high', 'is_signed': False})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         logger.info('Test is succeeded')
 
         logger.info('Test request. Content is empty. Security level is not empty. File is not signed')
-        data = FileService(path=test_folder).create_file(security_level='high')
-        filename = data.get('name')
+        resp = await client.post(
+            '/files', json={'security_level': 'high', 'is_signed': False})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         logger.info('Test is succeeded')
 
         logger.info('Test request. Content is not empty. Security level is empty. File is not signed')
-        data = FileService(path=test_folder).create_file(content=test_content)
-        filename = data.get('name')
+        resp = await client.post(
+            '/files', json={'content': test_content, 'is_signed': False})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         logger.info('Test is succeeded')
 
         logger.info('Test request. Content is not empty. Security level is not empty. File is signed')
-        data = FileServiceSigned(path=test_folder).create_file(content=test_content, security_level='high')
-        filename = data.get('name')
+        resp = await client.post(
+            '/files', json={'content': test_content, 'security_level': 'high', 'is_signed': True})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
         signature_file = '{}.{}'.format(filename.split('.')[0], 'md5')
         assert os.path.exists('{}/{}'.format(test_folder, filename))
         assert os.path.exists('{}/{}'.format(test_folder, signature_file))
         logger.info('Test is succeeded')
 
-    def test_delete_file(self, prepare_data):
+        logger.info(
+            'Test request. Content is not empty. Security level is not empty. Is_signed parameter is not set')
+        resp = await client.post(
+            '/files', json={'content': test_content, 'security_level': 'high'})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        filename = result.get('data').get('name')
+        assert os.path.exists('{}/{}'.format(test_folder, filename))
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. Access allowed. Is_signed parameter is invalid')
+        resp = await client.post(
+            '/files', json={'content': test_content, 'security_level': 'test', 'is_signed': 'test'})
+        assert resp.status == 400
+        assert await resp.text() == 'Is_signed should be boolean'
+        logger.info('Test is succeeded')
+
+    async def test_delete_file(self, client, prepare_data):
+        client, handler = tuple(client)
         test_file_part = test_file_2.split('.')[0]
 
+        logger.info('Test request. Method not allowed')
+        resp = await client.put('/files/{}'.format(test_file_part))
+        assert resp.status == 405
+        logger.info('Test is succeeded')
+
         logger.info('Test request. File exists')
-        FileService(path=test_folder).delete_file(test_file_part)
+        resp = await client.delete('/files/{}'.format(test_file_part))
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == 'File {} is successfully deleted'.format(test_file_2)
         signature_file = '{}.{}'.format(test_file_part, 'md5')
         assert not os.path.exists('{}/{}'.format(test_folder, test_file_2))
         assert not os.path.exists('{}/{}'.format(test_folder, signature_file))
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. Access allowed.')
+        test_file_part = test_file_8.split('.')[0]
+        resp = await client.delete('/files/{}'.format(test_file_part))
+        assert resp.status == 400
+        assert await resp.text() == 'File {} does not exist'.format(test_file_8)
+        assert not os.path.exists('{}/{}'.format(test_folder, test_file_8))
         logger.info('Test is succeeded')
 
     async def test_download_file(self, client, prepare_data):
@@ -327,14 +475,29 @@ class TestSuite:
 
         pass
 
-    def test_change_file_dir(self, prepare_data):
+    async def test_change_file_dir(self, client, prepare_data):
+        client, handler = tuple(client)
         new_test_folder = '../test_folder_2'
 
+        logger.info('Test request. Method not allowed')
+        resp = await client.get('/change_file_dir', json={'path': new_test_folder})
+        assert resp.status == 405
+        logger.info('Test is succeeded')
+
+        logger.info('Test request. Directory path is not set')
+        resp = await client.post('/change_file_dir', json={})
+        assert resp.status == 400
+        assert await resp.text() == 'Directory path is not set'
+        logger.info('Test is succeeded')
+
         logger.info('Test request. Directory path is set')
-        file_service = FileService(path=test_folder)
-        file_service_signed = FileServiceSigned(path=test_folder)
-        file_service.path = new_test_folder
-        file_service_signed.path = new_test_folder
-        assert file_service.path == new_test_folder
-        assert file_service_signed.path == new_test_folder
+        resp = await client.post(
+            '/change_file_dir', json={'path': new_test_folder})
+        assert resp.status == 200
+        result = json.loads(await resp.text())
+        assert result.get('status') == 'success'
+        assert result.get('message') == \
+            'You successfully changed working directory path. New path is {}'.format(new_test_folder)
+        assert handler.file_service.path == new_test_folder
+        assert handler.file_service_signed.path == new_test_folder
         logger.info('Test is succeeded')
