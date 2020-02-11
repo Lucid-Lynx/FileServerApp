@@ -6,7 +6,7 @@ from aiohttp import web
 from queue import Queue
 from distutils.util import strtobool
 from server.file_service import FileService, FileServiceSigned
-from server.file_loader import FileLoader, QueuedLoader
+# from server.file_loader import FileLoader, QueuedLoader
 # from server.users import UsersAPI
 # from server.role_model import RoleModel
 from server.users_sql import UsersSQLAPI
