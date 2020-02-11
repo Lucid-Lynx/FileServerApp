@@ -683,12 +683,12 @@ class TestSuite:
         logger.info('Test is succeeded')
 
         logger.info('Test request. User exists')
-        test_email_exists = 'user1@test.su'
+        test_email_exists = 'user2@test.su'
         resp = await client.post('/signup', json={
             'email': test_email_exists,
-            'password': '5test1234',
-            'confirm_password': '5test1234',
-            'name': 'User5',
+            'password': '2test1234',
+            'confirm_password': '2test1234',
+            'name': 'User2',
         })
         assert resp.status == 400
         assert await resp.text() == 'User with email {} already exists'.format(test_email_exists)
