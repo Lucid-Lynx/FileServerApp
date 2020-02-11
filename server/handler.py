@@ -6,10 +6,10 @@ from aiohttp import web
 from queue import Queue
 from distutils.util import strtobool
 from server.file_service import FileService, FileServiceSigned
-# from server.file_loader import FileLoader, QueuedLoader
+from server.file_loader import FileLoader, QueuedLoader
 # from server.users import UsersAPI
 # from server.role_model import RoleModel
-# from server.users_sql import UsersSQLAPI
+from server.users_sql import UsersSQLAPI
 # from server.role_model_sql import RoleModelSQL
 
 
@@ -39,7 +39,7 @@ class Handler:
 
     # @UsersAPI.authorized
     # @RoleModel.role_model
-    # @UsersSQLAPI.authorized
+    @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
     async def get_files(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for getting info about all files in working directory.
@@ -59,7 +59,7 @@ class Handler:
 
     # @UsersAPI.authorized
     # @RoleModel.role_model
-    # @UsersSQLAPI.authorized
+    @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
     async def get_file_info(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for getting full info about file in working directory.
@@ -86,7 +86,8 @@ class Handler:
             else:
                 file_service = self.file_service
 
-            result = await file_service.get_file_data_async(filename)
+            result = await file_service.get_file_data_async(filename, kwargs.get('user_id'))
+            result.pop('user_id')
             result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
@@ -102,7 +103,7 @@ class Handler:
 
     # @UsersAPI.authorized
     # @RoleModel.role_model
-    # @UsersSQLAPI.authorized
+    @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
     async def create_file(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for creating file.
@@ -141,7 +142,8 @@ class Handler:
                 file_service = self.file_service
 
             result = \
-                await file_service.create_file(data.get('content'), data.get('security_level'))
+                await file_service.create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
+            result.pop('user_id')
             result['size'] = '{} bytes'.format(result['size'])
 
             return web.json_response(data={
@@ -154,7 +156,7 @@ class Handler:
 
     # @UsersAPI.authorized
     # @RoleModel.role_model
-    # @UsersSQLAPI.authorized
+    @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
     async def delete_file(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for deleting file.
@@ -242,7 +244,24 @@ class Handler:
 
         """
 
-        pass
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            # UsersAPI.signup(**data)
+            UsersSQLAPI.signup(**data)
+            return web.json_response(data={
+                'status': 'success',
+                'message': 'User with email {} is successfully registered'.format(data.get('email')),
+            })
+
+        except (AssertionError, ValueError) as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     async def signin(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing in user.
@@ -263,7 +282,24 @@ class Handler:
 
         """
 
-        pass
+        result = ''
+        stream = request.content
+
+        while not stream.at_eof():
+            line = await stream.read()
+            result += line.decode('utf-8')
+
+        try:
+            data = json.loads(result)
+            return web.json_response(data={
+                'status': 'success',
+                # 'session_id': UsersAPI.signin(**data),
+                'session_id': UsersSQLAPI.signin(**data),
+                'message': 'You successfully signed in system',
+            })
+
+        except (AssertionError, ValueError) as err:
+            raise web.HTTPBadRequest(text='{}'.format(err))
 
     async def logout(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for logout.
@@ -279,7 +315,18 @@ class Handler:
 
         """
 
-        pass
+        session_id = request.headers.get('Authorization')
+
+        if not session_id:
+            raise web.HTTPUnauthorized(text='Unauthorized request')
+
+        # UsersAPI.logout(session_id)
+        UsersSQLAPI.logout(session_id)
+
+        return web.json_response(data={
+            'status': 'success',
+            'message': 'You successfully logged out',
+        })
 
     # @UsersAPI.authorized
     # @RoleModel.role_model
@@ -459,7 +506,7 @@ class Handler:
 
     # @UsersAPI.authorized
     # @RoleModel.role_model
-    # @UsersSQLAPI.authorized
+    @UsersSQLAPI.authorized
     # @RoleModelSQL.role_model
     async def change_file_dir(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for changing working directory with files.
