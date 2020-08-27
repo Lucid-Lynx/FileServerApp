@@ -27,11 +27,13 @@ class HashAPI:
             Str with hash in hex format.
 
         Raises:
-            AssertionError: if input string is not set.
+            ValueError: if input string is not set.
 
         """
 
-        assert input_str, 'Hash: input string is not set'
+        if not input_str:
+            raise ValueError('Hash: input string is not set')
+
         hash_obj = hashlib.sha512(input_str.encode())
 
         return hash_obj.hexdigest()
@@ -47,11 +49,13 @@ class HashAPI:
             Str with hash in hex format.
 
         Raises:
-            AssertionError: if input string is not set.
+            ValueError: if input string is not set.
 
         """
 
-        assert input_str, 'Hash: input string is not set'
+        if not input_str:
+            raise ValueError('Hash: input string is not set')
+
         hash_obj = hashlib.md5(input_str.encode())
 
         return hash_obj.hexdigest()
@@ -80,7 +84,7 @@ class BaseCipher:
         """Decrypt data.
 
         Args:
-            input_file (BinaryIO): Input file with data for decrypting,
+            input_file (BinaryIO): Input file with data for decrypting;
             filename (str): Input filename without extension.
 
         Returns:
@@ -94,8 +98,8 @@ class BaseCipher:
         """Encrypt data and write cipher text into output file.
 
         Args:
-            data (bytes): Encrypted data,
-            out_file (BinaryIO): Output file,
+            data (bytes): Encrypted data;
+            out_file (BinaryIO): Output file;
             filename (str): Output filename without extension.
 
         """
@@ -134,7 +138,7 @@ class AESCipher(BaseCipher):
         """Decrypt data.
 
         Args:
-            input_file (BinaryIO): Input file with data for decrypting,
+            input_file (BinaryIO): Input file with data for decrypting;
             filename (str): Input filename without extension.
 
         Returns:
@@ -143,7 +147,7 @@ class AESCipher(BaseCipher):
         """
 
         nonce, tag, cipher_text = [input_file.read(x) for x in (16, 16, -1)]
-        session_key_file = '{}/{}_{}.bin'.format(self.file_folder, self.user_id, filename)
+        session_key_file = f'{self.file_folder}/{self.user_id}_{filename}.bin'
         session_key = open(session_key_file, 'rb').read()
 
         return self.decrypt_aes_data(cipher_text, tag, nonce, session_key)
@@ -153,9 +157,9 @@ class AESCipher(BaseCipher):
         """Decrypt AES data.
 
         Args:
-            cipher_text (bytes): Cipher text for decrypting,
-            tag (bytes): AES tag,
-            nonce (bytes): AES nonce,
+            cipher_text (bytes): Cipher text for decrypting;
+            tag (bytes): AES tag;
+            nonce (bytes): AES nonce;
             session_key (bytes): AES session key.
 
         Returns:
@@ -172,14 +176,14 @@ class AESCipher(BaseCipher):
         """Encrypt data and write cipher text into output file.
 
         Args:
-            data (bytes): Encrypted data,
-            out_file (BinaryIO): Output file,
+            data (bytes): Encrypted data;
+            out_file (BinaryIO): Output file;
             filename (str): Output filename without extension.
 
         """
 
         cipher_text, tag, nonce, session_key = self.encrypt(data)
-        session_key_file = '{}/{}_{}.bin'.format(self.file_folder, self.user_id, filename)
+        session_key_file = f'{self.file_folder}/{self.user_id}_{filename}.bin'
 
         if not os.path.exists(session_key_file):
             with open(session_key_file, 'wb') as f:
@@ -203,8 +207,8 @@ class RSACipher(AESCipher):
         key = RSA.generate(2048)
         encrypted_key = key.export_key(passphrase=self.code, pkcs=8, protection=self.key_protection)
 
-        self.private_key_file = '{}/{}_private_rsa_key.bin'.format(key_folder, self.user_id)
-        self.public_key_file = '{}/{}_public_rsa_key.pem'.format(key_folder, self.user_id)
+        self.private_key_file = f'{key_folder}/{self.user_id}_private_rsa_key.bin'
+        self.public_key_file = f'{key_folder}/{self.user_id}_public_rsa_key.pem'
 
         if not os.path.exists(self.private_key_file):
             with open(self.private_key_file, 'wb') as f:
@@ -237,7 +241,7 @@ class RSACipher(AESCipher):
         """Decrypt data.
 
         Args:
-            input_file (BinaryIO): Input file with data for decrypting,
+            input_file (BinaryIO): Input file with data for decrypting;
             filename (str): Input filename without extension.
 
         Returns:
@@ -248,7 +252,7 @@ class RSACipher(AESCipher):
         private_key = RSA.import_key(open(self.private_key_file).read(), passphrase=self.code)
         nonce, tag, cipher_text = [input_file.read(x) for x in (16, 16, -1)]
         cipher_rsa = PKCS1_OAEP.new(private_key)
-        session_key_file = '{}/{}_{}.bin'.format(self.file_folder, self.user_id, filename)
+        session_key_file = f'{self.file_folder}/{self.user_id}_{filename}.bin'
         enc_session_key = open(session_key_file, 'rb').read()
         session_key = cipher_rsa.decrypt(enc_session_key)
 
@@ -258,14 +262,14 @@ class RSACipher(AESCipher):
         """Encrypt data and write cipher text into output file.
 
         Args:
-            data (bytes): Encrypted data,
-            out_file (BinaryIO): Output file,
+            data (bytes): Encrypted data;
+            out_file (BinaryIO): Output file;
             filename (str): Output filename without extension.
 
         """
 
         cipher_text, tag, nonce, session_key = self.encrypt(data)
-        session_key_file = '{}/{}_{}.bin'.format(self.file_folder, self.user_id, filename)
+        session_key_file = f'{self.file_folder}/{self.user_id}_{filename}.bin'
 
         if not os.path.exists(session_key_file):
             with open(session_key_file, 'wb') as f:

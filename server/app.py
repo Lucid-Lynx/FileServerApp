@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright 2019 by Kirill Kanin.
 # All rights reserved.
 
@@ -27,7 +29,7 @@ def commandline_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main():
+def app():
     """Entry point of app.
 
     Get and parse command line parameters and configure web app.
@@ -74,4 +76,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    app()

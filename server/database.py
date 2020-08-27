@@ -21,11 +21,8 @@ class DataBase(metaclass=SingletonMeta):
 
     __is_inited = False
     __instance = None
-    __db_string = "postgres://{}:{}@{}/{}".format(
-        os.environ['DB_USER'],
-        os.environ['DB_PASSWORD'],
-        os.environ['DB_HOST'],
-        os.environ['DB_NAME'])
+    __db_string = f"postgres://{os.environ['DB_USER']}:{os.environ['DB_PASSWORD']}" \
+                  f"@{os.environ['DB_HOST']}/{os.environ['DB_NAME']}"
     Base = declarative_base()
 
     def __init__(self):
