@@ -3,4 +3,4 @@
 
 from . import config
 
-__version__ = '1.13.3'
+__version__ = '1.14.0'
