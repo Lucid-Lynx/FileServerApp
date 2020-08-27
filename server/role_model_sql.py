@@ -37,14 +37,14 @@ class RoleModelSQL:
             """Wrap decorated method.
 
             Args:
-                *args (tuple): Tuple with nameless arguments,
+                *args (tuple): Tuple with nameless arguments;
                 **kwargs (dict): Dict with named arguments.
 
             Returns:
                 Result of called wrapped method.
 
             Raises:
-                HTTPUnauthorized: 401 HTTP error, if user session is expired or not found,
+                HTTPUnauthorized: 401 HTTP error, if user session is expired or not found;
                 HTTPForbidden: 403 HTTP error, if access denied.
 
             """
@@ -58,8 +58,8 @@ class RoleModelSQL:
             with closing(psycopg2.connect(**conn_params)) as conn:
                 with conn.cursor(cursor_factory=DictCursor) as cursor:
                     cursor.execute(sql.SQL(
-                        'SELECT * FROM public."Session" AS S JOIN public."User" AS U '
-                        'ON S."user_id" = U."Id" WHERE "UUID" = {}').format(sql.Literal(session_id)))
+                        f'SELECT * FROM public."Session" AS S JOIN public."User" AS U '
+                        f'ON S."user_id" = U."Id" WHERE "UUID" = {sql.Literal(session_id)}'))
                     session = cursor.fetchone()
 
                     if not session:
@@ -68,15 +68,15 @@ class RoleModelSQL:
                     if not session.get('role_id'):
                         raise web.HTTPForbidden(text='User is not attached to role')
 
-                    cursor.execute(sql.SQL('SELECT * FROM public."Method" WHERE "Name" = {}').format(
-                        sql.Literal(func.__name__)))
+                    cursor.execute(sql.SQL(
+                        f'SELECT * FROM public."Method" WHERE "Name" = {sql.Literal(func.__name__)}'))
                     method = cursor.fetchone()
 
                     if method and not method['Shared']:
                         cursor.execute(sql.SQL(
-                            'SELECT * FROM public."Role" AS R JOIN public."MethodRole" AS MR '
-                            'ON R."Id" = MR."role_id" WHERE R."Id" = {} AND MR."method_id" = {}').format(
-                                sql.Literal(session['role_id']), sql.Literal(method['Id'])))
+                            f'SELECT * FROM public."Role" AS R JOIN public."MethodRole" AS MR '
+                            f'ON R."Id" = MR."role_id" WHERE R."Id" = {sql.Literal(session["role_id"])} '
+                            f'AND MR."method_id" = {sql.Literal(method["Id"])}'))
                         relation = cursor.fetchone()
 
                         if not relation:

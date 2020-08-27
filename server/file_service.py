@@ -24,7 +24,7 @@ class FileService:
 
     def __init__(self, *args, **kwargs):
         if not self.__is_inited:
-            path = kwargs.get('path')
+            path = os.path.realpath(os.path.expanduser(kwargs.get('path')))
 
             if path:
                 if not os.path.exists(path):
@@ -65,11 +65,13 @@ class FileService:
             path (str): Path to working directory with files.
 
         Raises:
-            AssertionError: if directory does not exist.
+            IsADirectoryError: if directory does not exist.
 
         """
 
-        assert os.path.exists(path), 'Directory {} is not found'.format(path)
+        if not os.path.exists(path):
+            raise IsADirectoryError(f'Directory {path} is not found')
+
         os.chdir(path)
 
     def get_file_data(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
@@ -81,27 +83,32 @@ class FileService:
 
         Returns:
             Dict, which contains full info about file. Keys:
-                name (str): name of file with .txt extension.
-                content (str): file content.
-                create_date (str): date of file creation.
-                edit_date (str): date of last file modification.
-                size (int): size of file in bytes,
+                name (str): name of file with .txt extension;
+                content (str): file content;
+                create_date (str): date of file creation;
+                edit_date (str): date of last file modification;
+                size (int): size of file in bytes;
                 user_id (int): user Id.
 
         Raises:
-            AssertionError: if file does not exist, filename format is invalid,
-            ValueError: if security level is invalid.
+            ValueError: filename format is invalid, user Id is not set;
+            FileNotFoundError: if file does not exist;
+            PermissionError: if security level is invalid.
 
         """
 
-        assert user_id, 'User Id is not set'
+        if not user_id:
+            raise ValueError('User Id is not set')
 
-        short_filename = '{}.{}'.format(filename, self.extension)
-        full_filename = '{}/{}'.format(self.path, short_filename)
-        assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
+        short_filename = f'{filename}.{self.extension}'
+        full_filename = f'{self.path}/{short_filename}'
+        if not os.path.exists(full_filename):
+            raise FileNotFoundError(f'File {short_filename} does not exist')
 
         filename_parts = filename.split('_')
-        assert len(filename_parts) == 2, 'Invalid format of file name'
+        if len(filename_parts) != 2:
+            raise ValueError('Invalid format of file name')
+
         security_level = filename_parts[1]
 
         if not security_level or security_level == 'low':
@@ -111,7 +118,7 @@ class FileService:
         elif security_level == 'high':
             cipher = RSACipher(user_id, self.path)
         else:
-            raise ValueError('Security level is invalid')
+            raise PermissionError('Security level is invalid')
 
         with open(full_filename, 'rb') as file_handler:
             return OrderedDict(
@@ -126,32 +133,37 @@ class FileService:
         """Get full info about file. Asynchronous version.
 
         Args:
-            filename (str): Filename without .txt file extension,
+            filename (str): Filename without .txt file extension;
             user_id (int): User Id.
 
         Returns:
             Dict, which contains full info about file. Keys:
-                name (str): name of file with .txt extension.
-                content (str): file content.
-                create_date (str): date of file creation.
-                edit_date (str): date of last file modification.
-                size (int): size of file in bytes,
+                name (str): name of file with .txt extension;
+                content (str): file content;
+                create_date (str): date of file creation;
+                edit_date (str): date of last file modification;
+                size (int): size of file in bytes;
                 user_id (int): user Id.
 
         Raises:
-            AssertionError: if file does not exist, filename format is invalid,
-            ValueError: if security level is invalid.
+            ValueError: filename format is invalid, user Id is not set;
+            FileNotFoundError: if file does not exist;
+            PermissionError: if security level is invalid.
 
         """
 
-        assert user_id, 'User Id is not set'
+        if not user_id:
+            raise ValueError('User Id is not set')
 
-        short_filename = '{}.{}'.format(filename, self.extension)
-        full_filename = '{}/{}'.format(self.path, short_filename)
-        assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
+        short_filename = f'{filename}.{self.extension}'
+        full_filename = f'{self.path}/{short_filename}'
+        if not os.path.exists(full_filename):
+            raise FileNotFoundError(f'File {short_filename} does not exist')
 
         filename_parts = filename.split('_')
-        assert len(filename_parts) == 2, 'Invalid format of file name'
+        if len(filename_parts) != 2:
+            raise ValueError('Invalid format of file name')
+
         security_level = filename_parts[1]
 
         if not security_level or security_level == 'low':
@@ -161,7 +173,7 @@ class FileService:
         elif security_level == 'high':
             cipher = RSACipher(user_id, self.path)
         else:
-            raise ValueError('Security level is invalid')
+            raise PermissionError('Security level is invalid')
 
         with open(full_filename, 'rb') as file_handler:
             return OrderedDict(
@@ -177,24 +189,24 @@ class FileService:
 
         Returns:
             List of dicts, which contains info about each file. Keys:
-                name (str): name of file with .txt extension.
-                create_date (str): date of file creation.
-                edit_date (str): date of last file modification.
+                name (str): name of file with .txt extension;
+                create_date (str): date of file creation;
+                edit_date (str): date of last file modification;
                 size (str): size of file in bytes.
 
         """
 
         data = []
-        files = [f for f in os.listdir(self.path) if os.path.isfile('{}/{}'.format(self.path, f))]
+        files = [f for f in os.listdir(self.path) if os.path.isfile(f'{self.path}/{f}')]
         files = list(filter(lambda f: len(f.split('.')) > 1 and f.split('.')[1] == self.extension, files))
 
         for f in files:
-            full_filename = '{}/{}'.format(self.path, f)
+            full_filename = f'{self.path}/{f}'
             data.append({
                 'name': f,
                 'create_date': utils.convert_date(os.path.getctime(full_filename)),
                 'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
-                'size': '{} bytes'.format(os.path.getsize(full_filename))
+                'size': f'{os.path.getsize(full_filename)} bytes'
             })
 
         return data
@@ -206,32 +218,33 @@ class FileService:
         Method generates name of file from random string with digits and latin letters.
 
         Args:
-            content (str): String with file content,
-            security_level (str): String with security level,
+            content (str): String with file content;
+            security_level (str): String with security level;
             user_id (int): User Id.
 
         Returns:
             Dict, which contains name of created file. Keys:
-                name (str): name of file with .txt extension.
-                content (str): file content.
-                create_date (str): date of file creation.
-                size (int): size of file in bytes,
+                name (str): name of file with .txt extension;
+                content (str): file content;
+                create_date (str): date of file creation;
+                size (int): size of file in bytes;
                 user_id (int): user Id.
 
         Raises:
-            AssertionError: if user_id is not set,
-            ValueError: if security level is invalid.
+            ValueError: if user_id is not set;
+            PermissionError: if security level is invalid.
 
         """
 
-        assert user_id, 'User Id is not set'
+        if not user_id:
+            raise ValueError('User Id is not set')
 
-        filename = '{}_{}.{}'.format(utils.generate_string(), security_level, self.extension)
-        full_filename = '{}/{}'.format(self.path, filename)
+        filename = f'{utils.generate_string()}_{security_level}.{self.extension}'
+        full_filename = f'{self.path}/{filename}'
 
         while os.path.exists(full_filename):
-            filename = '{}_{}.{}'.format(utils.generate_string(), security_level, self.extension)
-            full_filename = '{}/{}'.format(self.path, filename)
+            filename = f'{utils.generate_string()}_{security_level}.{self.extension}'
+            full_filename = f'{self.path}/{filename}'
 
         if not security_level or security_level == 'low':
             cipher = BaseCipher()
@@ -240,7 +253,7 @@ class FileService:
         elif security_level == 'high':
             cipher = RSACipher(user_id, self.path)
         else:
-            raise ValueError('Security level is invalid')
+            raise PermissionError('Security level is invalid')
 
         with open(full_filename, 'wb') as file_handler:
             if content:
@@ -264,15 +277,17 @@ class FileService:
             Str with filename with .txt file extension.
 
         Raises:
-            AssertionError: if file does not exist.
+            FileNotFoundError: if file does not exist.
 
         """
 
-        short_filename = '{}.{}'.format(filename, self.extension)
-        signature_file = '{}.{}'.format(filename, 'md5')
-        full_filename = "{}/{}".format(self.path, short_filename)
-        full_signature_file = "{}/{}".format(self.path, signature_file)
-        assert os.path.exists(full_filename), 'File {} does not exist'.format(short_filename)
+        short_filename = f'{filename}.{self.extension}'
+        signature_file = f'{filename}.md5'
+        full_filename = f'{self.path}/{short_filename}'
+        full_signature_file = f'{self.path}/{signature_file}'
+
+        if not os.path.exists(full_filename):
+            raise FileNotFoundError(f'File {short_filename} does not exist')
 
         os.remove(full_filename)
 
@@ -291,22 +306,22 @@ class FileServiceSigned(FileService):
         """Get full info about file.
 
         Args:
-            filename (str): Filename without .txt file extension,
+            filename (str): Filename without .txt file extension;
             user_id (int): User Id.
 
         Returns:
             Dict, which contains full info about file. Keys:
-                name (str): name of file with .txt extension.
-                content (str): file content.
-                create_date (str): date of file creation.
-                edit_date (str): date of last file modification.
-                size (int): size of file in bytes,
+                name (str): name of file with .txt extension;
+                content (str): file content;
+                create_date (str): date of file creation;
+                edit_date (str): date of last file modification;
+                size (int): size of file in bytes;
                 user_id (int): user Id.
 
         Raises:
-            AssertionError: if file does not exist, filename format is invalid, signatures are not match,
-            signature file does not exist,
-            ValueError: if security level is invalid.
+            ValueError: filename format is invalid, user Id is not set;
+            FileNotFoundError: if file does not exist, signature file does not exist;
+            PermissionError: if security level is invalid, signatures are not match.
 
         """
 
@@ -314,14 +329,16 @@ class FileServiceSigned(FileService):
         result_for_check = result
         result_for_check.pop('edit_date')
 
-        short_filename = '{}.{}'.format(filename, 'md5')
-        full_filename = '{}/{}'.format(self.path, short_filename)
-        assert os.path.exists(full_filename), 'Signature file {} does not exist'.format(short_filename)
+        short_filename = f'{filename}.md5'
+        full_filename = f'{self.path}/{short_filename}'
+        if not os.path.exists(full_filename):
+            raise FileNotFoundError(f'Signature file {short_filename} does not exist')
 
         signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result_for_check.values()))))
 
         with open(full_filename, 'rb') as file_handler:
-            assert file_handler.read() == bytes(signature, 'utf-8'), 'Signatures are not match'
+            if file_handler.read() != bytes(signature, 'utf-8'):
+                raise PermissionError('Signatures are not match')
 
         return result
 
@@ -329,22 +346,22 @@ class FileServiceSigned(FileService):
         """Get full info about file. Asynchronous version.
 
         Args:
-            filename (str): Filename without .txt file extension,
+            filename (str): Filename without .txt file extension;
             user_id (int): User Id.
 
         Returns:
             Dict, which contains full info about file. Keys:
-                name (str): name of file with .txt extension.
-                content (str): file content.
-                create_date (str): date of file creation.
-                edit_date (str): date of last file modification.
-                size (int): size of file in bytes,
+                name (str): name of file with .txt extension;
+                content (str): file content;
+                create_date (str): date of file creation;
+                edit_date (str): date of last file modification;
+                size (int): size of file in bytes;
                 user_id (int): user Id.
 
         Raises:
-            AssertionError: if file does not exist, filename format is invalid, signatures are not match,
-            signature file does not exist,
-            ValueError: if security level is invalid.
+            ValueError: filename format is invalid, user Id is not set;
+            FileNotFoundError: if file does not exist, signature file does not exist;
+            PermissionError: if security level is invalid, signatures are not match.
 
         """
 
@@ -352,14 +369,16 @@ class FileServiceSigned(FileService):
         result_for_check = result
         result_for_check.pop('edit_date')
 
-        short_filename = '{}.{}'.format(filename, 'md5')
-        full_filename = '{}/{}'.format(self.path, short_filename)
-        assert os.path.exists(full_filename), 'Signature file {} does not exist'.format(short_filename)
+        short_filename = f'{filename}.md5'
+        full_filename = f'{self.path}/{short_filename}'
+        if not os.path.exists(full_filename):
+            raise FileNotFoundError(f'Signature file {short_filename} does not exist')
 
         signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result_for_check.values()))))
 
         with open(full_filename, 'rb') as file_handler:
-            assert file_handler.read() == bytes(signature, 'utf-8'), 'Signatures are not match'
+            if file_handler.read() != bytes(signature, 'utf-8'):
+                raise PermissionError('Signatures are not match')
 
         return result
 
@@ -370,28 +389,28 @@ class FileServiceSigned(FileService):
         Method generates name of file from random string with digits and latin letters.
 
         Args:
-            content (str): String with file content,
-            security_level (str): String with security level,
+            content (str): String with file content;
+            security_level (str): String with security level;
             user_id (int): User Id.
 
         Returns:
             Dict, which contains name of created file. Keys:
-                name (str): name of file with .txt extension.
-                content (str): file content.
-                create_date (str): date of file creation.
-                size (int): size of file in bytes,
+                name (str): name of file with .txt extension;
+                content (str): file content;
+                create_date (str): date of file creation;
+                size (int): size of file in bytes;
                 user_id (int): user Id.
 
         Raises:
-            AssertionError: if user_id is not set,
-            ValueError: if security level is invalid.
+            ValueError: if user_id is not set,
+            PermissionError: if security level is invalid.
 
         """
 
         result = await super().create_file(content, security_level, user_id)
         signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(result.values()))))
-        filename = '{}.{}'.format(result['name'].split('.')[0], 'md5')
-        full_filename = '{}/{}'.format(self.path, filename)
+        filename = f"{result['name'].split('.')[0]}.md5"
+        full_filename = f'{self.path}/{filename}'
 
         with open(full_filename, 'wb') as file_handler:
             data = bytes(signature, 'utf-8')

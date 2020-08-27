@@ -83,7 +83,10 @@ class Handler:
         try:
             filename = request.rel_url.query['filename']
             is_signed = request.rel_url.query['is_signed']
-            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+
+            if is_signed not in ['true', 'false']:
+                raise ValueError('Is_signed is invalid')
+
             is_signed = strtobool(is_signed)
 
             if is_signed:
@@ -93,18 +96,15 @@ class Handler:
 
             result = await file_service.get_file_data_async(filename, kwargs.get('user_id'))
             result.pop('user_id')
-            result['size'] = '{} bytes'.format(result['size'])
+            result['size'] = f'{result["size"]} bytes'
 
             return web.json_response(data={
                 'status': 'success',
                 'data': result,
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
-
-        except KeyError as err:
-            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -139,7 +139,8 @@ class Handler:
         try:
             data = json.loads(result)
             is_signed = data.get('is_signed', False)
-            assert isinstance(is_signed, bool), 'Is_signed should be boolean'
+            if not isinstance(is_signed, bool):
+                raise ValueError('Is_signed should be boolean')
 
             if is_signed:
                 file_service = self.file_service_signed
@@ -149,15 +150,15 @@ class Handler:
             result = \
                 await file_service.create_file(data.get('content'), data.get('security_level'), kwargs.get('user_id'))
             result.pop('user_id')
-            result['size'] = '{} bytes'.format(result['size'])
+            result['size'] = f'{result["size"]} bytes'
 
             return web.json_response(data={
                 'status': 'success',
                 'data': result,
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -182,11 +183,11 @@ class Handler:
         try:
             return web.json_response(data={
                 'status': 'success',
-                'message': 'File {} is successfully deleted'.format(self.file_service.delete_file(filename)),
+                'message': f'File {self.file_service.delete_file(filename)} is successfully deleted',
             })
 
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -209,24 +210,26 @@ class Handler:
         try:
             filename = request.rel_url.query['filename']
             is_signed = request.rel_url.query['is_signed']
-            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+
+            if is_signed not in ['true', 'false']:
+                raise ValueError('Is_signed is invalid')
+
             is_signed = strtobool(is_signed)
 
             thread = FileLoader(filename, kwargs.get('user_id'), is_signed)
             thread.start()
             thread.join()
-            assert thread.state == 'finished', thread.message
+
+            if thread.state != 'finished':
+                raise SystemError(thread.message)
 
             return web.json_response(data={
                 'status': 'success',
                 'message': thread.message,
             })
 
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
-
-        except KeyError as err:
-            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -249,7 +252,10 @@ class Handler:
         try:
             filename = request.rel_url.query['filename']
             is_signed = request.rel_url.query['is_signed']
-            assert is_signed in ['true', 'false'], 'Is_signed is invalid'
+
+            if is_signed not in ['true', 'false']:
+                raise ValueError('Is_signed is invalid')
+
             is_signed = strtobool(is_signed)
             self.queue.put({
                 'filename': filename,
@@ -259,15 +265,13 @@ class Handler:
 
             return web.json_response(data={
                 'status': 'success',
-                'message': 'Request for downloading file {}.{} is successfully added into queue'.format(
-                    filename, self.file_service.extension),
+                'message':
+                    f'Request for downloading file {filename}.{self.file_service.extension} '
+                    f'is successfully added into queue'
             })
 
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
-
-        except KeyError as err:
-            raise web.HTTPBadRequest(text='Parameter {} is not set'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     async def signup(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing up user.
@@ -275,8 +279,8 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "name": "string. User's first name. Required"
-                "surname": "string. User's last name. Optional"
+                "name": "string. User's first name. Required",
+                "surname": "string. User's last name. Optional",
                 "email": "string. User's email. Required",
                 "password": "string. Required letters and numbers. Quantity of symbols > 8 and < 50. Required",
                 "confirm_password": "string. Must match with password. Required"
@@ -301,13 +305,14 @@ class Handler:
             data = json.loads(result)
             UsersAPI.signup(**data)
             # UsersSQLAPI.signup(**data)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'User with email {} is successfully registered'.format(data.get('email')),
+                'message': f'User with email {data.get("email")} is successfully registered',
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     async def signin(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for signing in user.
@@ -316,7 +321,7 @@ class Handler:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
                 "email": "string. User's email. Required",
-                "password": "string. User's password. Required",
+                "password": "string. User's password. Required"
             }.
 
         Returns:
@@ -337,6 +342,7 @@ class Handler:
 
         try:
             data = json.loads(result)
+
             return web.json_response(data={
                 'status': 'success',
                 'session_id': UsersAPI.signin(**data),
@@ -344,8 +350,8 @@ class Handler:
                 'message': 'You successfully signed in system',
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     async def logout(self, request: web.Request, *args, **kwargs) -> web.Response:
         """Coroutine for logout.
@@ -396,13 +402,14 @@ class Handler:
 
         try:
             RoleModel.add_method(method_name)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully added method {}'.format(method_name),
+                'message': f'You successfully added method {method_name}',
             })
 
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -426,13 +433,14 @@ class Handler:
 
         try:
             RoleModel.delete_method(method_name)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully deleted method {}'.format(method_name),
+                'message': f'You successfully deleted method {method_name}',
             })
 
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -456,13 +464,14 @@ class Handler:
 
         try:
             RoleModel.add_role(role_name)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully added role {}'.format(role_name),
+                'message': f'You successfully added role {role_name}',
             })
 
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -486,13 +495,14 @@ class Handler:
 
         try:
             RoleModel.delete_role(role_name)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully deleted role {}'.format(role_name),
+                'message': f'You successfully deleted role {role_name}',
             })
 
-        except AssertionError as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -505,7 +515,7 @@ class Handler:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
                 "method": "string. Method name. Required",
-                "role": "string. Role name. Required",
+                "role": "string. Role name. Required"
             }.
 
         Returns:
@@ -526,13 +536,14 @@ class Handler:
         try:
             data = json.loads(result)
             RoleModel.add_method_to_role(**data)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully added method {} to role {}'.format(data.get('method'), data.get('role')),
+                'message': f'You successfully added method {data.get("method")} to role {data.get("role")}',
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -545,7 +556,7 @@ class Handler:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
                 "method": "string. Method name. Required",
-                "role": "string. Role name. Required",
+                "role": "string. Role name. Required"
             }.
 
         Returns:
@@ -566,14 +577,14 @@ class Handler:
         try:
             data = json.loads(result)
             RoleModel.delete_method_from_role(**data)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully deleted method {} from role {}'.format(
-                    data.get('method'), data.get('role')),
+                'message': f'You successfully deleted method {data.get("method")} from role {data.get("role")}',
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -586,7 +597,7 @@ class Handler:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
                 "method": "string. Method name. Required",
-                "value": "boolean. Value of shared property. Required",
+                "value": "boolean. Value of shared property. Required"
             }.
 
         Returns:
@@ -607,14 +618,16 @@ class Handler:
         try:
             data = json.loads(result)
             RoleModel.change_shared_prop(**data)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully changed shared property of method {}. Property is {}'.format(
-                    data.get('method'), 'enabled' if data.get('value') else 'disabled'),
+                'message':
+                    f'You successfully changed shared property of method {data.get("method")}. Property is '
+                    f'{"enabled" if data.get("value") else "disabled"}'
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -627,7 +640,7 @@ class Handler:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
                 "email": "string. User's email. Required",
-                "role": "string. Role name. Required",
+                "role": "string. Role name. Required"
             }.
 
         Returns:
@@ -648,14 +661,15 @@ class Handler:
         try:
             data = json.loads(result)
             RoleModel.change_user_role(**data)
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully changed role of user with email {}. New role is {}'.format(
-                    data.get('email'), data.get('role')),
+                'message': f'You successfully changed role of user with email {data.get("email")}. '
+                           f'New role is {data.get("role")}'
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))
 
     @UsersAPI.authorized
     @RoleModel.role_model
@@ -667,7 +681,7 @@ class Handler:
         Args:
             request (Request): aiohttp request, contains JSON in body. JSON format:
             {
-                "path": "string. Directory path. Required",
+                "path": "string. Directory path. Required"
             }.
 
         Returns:
@@ -688,13 +702,17 @@ class Handler:
         try:
             data = json.loads(result)
             path = data.get('path')
-            assert path, 'Directory path is not set'
+
+            if not path:
+                raise ValueError('Directory path is not set')
+
             self.file_service.path = path
             self.file_service_signed.path = path
+
             return web.json_response(data={
                 'status': 'success',
-                'message': 'You successfully changed working directory path. New path is {}'.format(data.get('path')),
+                'message': f'You successfully changed working directory path. New path is {data.get("path")}',
             })
 
-        except (AssertionError, ValueError) as err:
-            raise web.HTTPBadRequest(text='{}'.format(err))
+        except Exception as err:
+            raise web.HTTPBadRequest(text=str(err))

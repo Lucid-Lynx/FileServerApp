@@ -45,7 +45,7 @@ class UsersSQLAPI:
             """Wrap decorated method.
 
             Args:
-                *args (tuple): Tuple with nameless arguments,
+                *args (tuple): Tuple with nameless arguments;
                 **kwargs (dict): Dict with named arguments.
 
             Returns:
@@ -64,8 +64,7 @@ class UsersSQLAPI:
 
             with closing(psycopg2.connect(**conn_params)) as conn:
                 with conn.cursor(cursor_factory=DictCursor) as cursor:
-                    cursor.execute(sql.SQL('SELECT * FROM public."Session" WHERE "UUID" = {}').format(
-                        sql.Literal(session_id)))
+                    cursor.execute(sql.SQL(f'SELECT * FROM public."Session" WHERE "UUID" = {sql.Literal(session_id)}'))
                     session = cursor.fetchone()
 
                     if not session:
@@ -73,7 +72,7 @@ class UsersSQLAPI:
 
                     if session['Expiration Date'] < datetime.now():
                         cursor.execute(
-                            sql.SQL('DELETE FROM public."Session" WHERE "Id" = {}').format(sql.Literal(session['Id'])))
+                            sql.SQL(f'DELETE FROM public."Session" WHERE "Id" = {sql.Literal(session["Id"])}'))
                         conn.commit()
                         raise web.HTTPUnauthorized(text='Session expired. Please, sign in again')
 
@@ -89,16 +88,17 @@ class UsersSQLAPI:
 
         Args:
             **kwargs (dict): Dict with named arguments. Keys:
-                email (str): user's email. Required.
+                email (str): user's email. Required;
                 password (str): user's password. Required letters and numbers. Quantity of symbols > 8 and < 50.
-                Required.
-                confirm_password (str): password confirmation. Must match with password. Required.
-                name (str): user's first name. Required.
+                Required;
+                confirm_password (str): password confirmation. Must match with password. Required;
+                name (str): user's first name. Required;
                 surname (str): user's last name. Optional. Required.
 
         Raises:
-            AssertionError: if at least one of required parameters in kwargs is not set, user with set email exists,
-            email or password format is invalid, passwords are not match.
+            ValueError: if at least one of required parameters in kwargs is not set, email or password format is
+            invalid, passwords are not match;
+            SystemError: user with set email exists.
 
         """
 
@@ -108,14 +108,27 @@ class UsersSQLAPI:
         name = kwargs.get('name')
         surname = kwargs.get('surname')
 
-        assert email and (email := email.strip()), 'Email is not set'
-        assert password and (password := password.strip()), 'Password is not set'
-        assert confirm_password and (confirm_password := confirm_password.strip()), 'Please, repeat the password'
-        assert name and (name := name.strip()), 'Name is not set'
-        assert EMAIL_REGEX.match(email), 'Invalid email format'
-        assert PASSWORD_REGEX.match(password), \
-            'Invalid password. Password should contain letters, digits and will be 8 to 50 characters long'
-        assert password == confirm_password, 'Passwords are not match'
+        if not email or not (email := email.strip()):
+            raise ValueError('Email is not set')
+
+        if not password or not (password := password.strip()):
+            raise ValueError('Password is not set')
+
+        if not confirm_password or not (confirm_password := confirm_password.strip()):
+            raise ValueError('Please, repeat the password')
+
+        if not name or not (name := name.strip()):
+            raise ValueError('Name is not set')
+
+        if not EMAIL_REGEX.match(email):
+            raise ValueError('Invalid email format')
+
+        if not PASSWORD_REGEX.match(password):
+            raise ValueError(
+                'Invalid password. Password should contain letters, digits and will be 8 to 50 characters long')
+
+        if password != confirm_password:
+            raise ValueError('Passwords are not match')
 
         if surname:
             surname = surname.strip()
@@ -124,18 +137,20 @@ class UsersSQLAPI:
 
         with closing(psycopg2.connect(**conn_params)) as conn:
             with conn.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(sql.SQL('SELECT * FROM public."User" WHERE "Email" = {}').format(sql.Literal(email)))
+                cursor.execute(sql.SQL(f'SELECT * FROM public."User" WHERE "Email" = {sql.Literal(email)}'))
                 existed_user = cursor.fetchone()
-                assert not existed_user, 'User with email {} already exists'.format(email)
-                cursor.execute(sql.SQL('SELECT * FROM public."Role" WHERE "Name" = {}').format(sql.Literal('visitor')))
+
+                if existed_user:
+                    raise SystemError(f'User with email {email} already exists')
+
+                cursor.execute(sql.SQL(f'SELECT * FROM public."Role" WHERE "Name" = {sql.Literal("visitor")}'))
                 role_visitor = cursor.fetchone()
                 columns = ("Create Date", "Email", "Password", "Name", "Surname", "role_id")
                 values = (datetime.strftime(datetime.now(), dt_format), email, hashed_password, name, surname,
                           role_visitor['Id'])
                 cursor.execute(sql.SQL(
-                    'INSERT INTO public."User" ({}) VALUES({})').format(
-                    sql.SQL(', ').join(map(sql.Identifier, columns)),
-                        sql.SQL(', ').join(map(sql.Literal, values))))
+                    f'INSERT INTO public."User" ({sql.SQL(", ").join(map(sql.Identifier, columns))}) '
+                    f'VALUES({sql.SQL(", ").join(map(sql.Literal, values))})'))
                 conn.commit()
 
     @staticmethod
@@ -144,35 +159,42 @@ class UsersSQLAPI:
 
         Args:
             **kwargs (dict): Dict with named arguments. Keys:
-                email (str): user's email. Required.
+                email (str): user's email. Required;
                 password (str): user's password. Required.
 
         Returns:
             Str with session UUID.
 
         Raises:
-            AssertionError: if at least one of required parameters in kwargs is not set, user does not exist,
-            email format is invalid, incorrect password.
+            ValueError: if at least one of required parameters in kwargs is not set, email format is invalid;
+            PermissionError: incorrect login or password.
 
         """
 
         email = kwargs.get('email')
         password = kwargs.get('password')
 
-        assert email and (email := email.strip()), 'Email is not set'
-        assert password and (password := password.strip()), 'Password is not set'
-        assert EMAIL_REGEX.match(email), 'Invalid email format'
+        if not email or not (email := email.strip()):
+            raise ValueError('Email is not set')
+
+        if not password or not (password := password.strip()):
+            raise ValueError('Password is not set')
+
+        if not EMAIL_REGEX.match(email):
+            raise ValueError('Invalid email format')
 
         hashed_password = HashAPI.hash_sha512(password)
         uuid_str = str(uuid4())
 
         with closing(psycopg2.connect(**conn_params)) as conn:
             with conn.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(sql.SQL('SELECT * FROM public."User" WHERE "Email" = {}').format(sql.Literal(email)))
+                cursor.execute(sql.SQL(f'SELECT * FROM public."User" WHERE "Email" = {sql.Literal(email)}'))
                 user = cursor.fetchone()
-                assert user and hashed_password == user['Password'], 'Incorrect login or password'.format(email)
-                cursor.execute(sql.SQL('SELECT * FROM public."Session" WHERE "user_id" = {}').format(
-                    sql.Literal(user['Id'])))
+
+                if not user or hashed_password != user['Password']:
+                    raise PermissionError('Incorrect login or password')
+
+                cursor.execute(sql.SQL(f'SELECT * FROM public."Session" WHERE "user_id" = {sql.Literal(user["Id"])}'))
                 user_session = cursor.fetchone()
 
                 if user_session and user_session['Expiration Date'] >= datetime.now():
@@ -180,18 +202,19 @@ class UsersSQLAPI:
 
                 elif user_session:
                     cursor.execute(
-                        sql.SQL('DELETE FROM public."Session" WHERE "Id" = {}').format(sql.Literal(user_session['Id'])))
+                        sql.SQL(f'DELETE FROM public."Session" WHERE "Id" = {sql.Literal(user_session["Id"])}'))
 
                 columns = ("Create Date", "UUID", "Expiration Date", "user_id")
                 values = (datetime.strftime(datetime.now(), dt_format), str(uuid_str),
                           datetime.strftime(datetime.now() + timedelta(
                               hours=int(os.environ['SESSION_DURATION_HOURS'])), dt_format), user['Id'])
                 cursor.execute(sql.SQL(
-                    'INSERT INTO public."Session" ({}) VALUES ({})').format(
-                        sql.SQL(', ').join(map(sql.Identifier, columns)),
-                        sql.SQL(', ').join(map(sql.Literal, values))))
-                cursor.execute(sql.SQL('UPDATE public."User" SET "Last Login Date" = {} WHERE "Id" = {}').format(
-                    sql.Literal(datetime.strftime(datetime.now(), dt_format)), sql.Literal(user['Id'])))
+                    f'INSERT INTO public."Session" ({sql.SQL(", ").join(map(sql.Identifier, columns))}) '
+                    f'VALUES ({sql.SQL(", ").join(map(sql.Literal, values))})'))
+                cursor.execute(sql.SQL(
+                    f'UPDATE public."User" SET "Last Login Date" = '
+                    f'{sql.Literal(datetime.strftime(datetime.now(), dt_format))} '
+                    f'WHERE "Id" = {sql.Literal(user["Id"])}'))
                 conn.commit()
         
         return uuid_str
@@ -207,6 +230,5 @@ class UsersSQLAPI:
 
         with closing(psycopg2.connect(**conn_params)) as conn:
             with conn.cursor(cursor_factory=DictCursor) as cursor:
-                cursor.execute(sql.SQL('DELETE FROM public."Session" WHERE "UUID" = {}').format(
-                    sql.Literal(session_id)))
+                cursor.execute(sql.SQL(f'DELETE FROM public."Session" WHERE "UUID" = {sql.Literal(session_id)}'))
                 conn.commit()

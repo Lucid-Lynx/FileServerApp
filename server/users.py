@@ -33,7 +33,7 @@ class UsersAPI:
             """Wrap decorated method.
 
             Args:
-                *args (tuple): Tuple with nameless arguments,
+                *args (tuple): Tuple with nameless arguments;
                 **kwargs (dict): Dict with named arguments.
 
             Returns:
@@ -74,16 +74,18 @@ class UsersAPI:
 
         Args:
             **kwargs (dict): Dict with named arguments. Keys:
-                email (str): user's email. Required.
+                email (str): user's email. Required;
                 password (str): user's password. Required letters and numbers. Quantity of symbols > 8 and < 50.
-                Required.
-                confirm_password (str): password confirmation. Must match with password. Required.
-                name (str): user's first name. Required.
+                Required;
+                confirm_password (str): password confirmation. Must match with password. Required;
+                name (str): user's first name. Required;
                 surname (str): user's last name. Optional. Required.
 
         Raises:
-            AssertionError: if at least one of required parameters in kwargs is not set, user with set email exists,
-            email or password format is invalid, passwords are not match.
+            ValueError: if at least one of required parameters in kwargs is not set, email or password format is
+            invalid, passwords are not match;
+            SystemError: user with set email exists.
+
 
         """
 
@@ -93,14 +95,27 @@ class UsersAPI:
         name = kwargs.get('name')
         surname = kwargs.get('surname')
 
-        assert email and (email := email.strip()), 'Email is not set'
-        assert password and (password := password.strip()), 'Password is not set'
-        assert confirm_password and (confirm_password := confirm_password.strip()), 'Please, repeat the password'
-        assert name and (name := name.strip()), 'Name is not set'
-        assert EMAIL_REGEX.match(email), 'Invalid email format'
-        assert PASSWORD_REGEX.match(password), \
-            'Invalid password. Password should contain letters, digits and will be 8 to 50 characters long'
-        assert password == confirm_password, 'Passwords are not match'
+        if not email or not (email := email.strip()):
+            raise ValueError('Email is not set')
+
+        if not password or not (password := password.strip()):
+            raise ValueError('Password is not set')
+
+        if not confirm_password or not (confirm_password := confirm_password.strip()):
+            raise ValueError('Please, repeat the password')
+
+        if not name or not (name := name.strip()):
+            raise ValueError('Name is not set')
+
+        if not EMAIL_REGEX.match(email):
+            raise ValueError('Invalid email format')
+
+        if not PASSWORD_REGEX.match(password):
+            raise ValueError(
+                'Invalid password. Password should contain letters, digits and will be 8 to 50 characters long')
+
+        if password != confirm_password:
+            raise ValueError('Passwords are not match')
 
         if surname:
             surname = surname.strip()
@@ -110,7 +125,10 @@ class UsersAPI:
         db = DataBase()
         db_session = db.create_session()
         existed_user = db_session.query(db.User).filter_by(email=email).first()
-        assert not existed_user, 'User with email {} already exists'.format(email)
+
+        if existed_user:
+            raise SystemError(f'User with email {email} already exists')
+
         role_visitor = db_session.query(db.Role).filter_by(name="visitor").first()
         db_session.add(db.User(email, hashed_password, name, surname, role=role_visitor))
         db_session.commit()
@@ -121,31 +139,38 @@ class UsersAPI:
 
         Args:
             **kwargs (dict): Dict with named arguments. Keys:
-                email (str): user's email. Required.
+                email (str): user's email. Required;
                 password (str): user's password. Required.
 
         Returns:
             Str with session UUID.
 
         Raises:
-            AssertionError: if at least one of required parameters in kwargs is not set, user does not exist,
-            email format is invalid, incorrect password.
+            ValueError: if at least one of required parameters in kwargs is not set, email format is invalid;
+            PermissionError: incorrect login or password.
 
         """
 
         email = kwargs.get('email')
         password = kwargs.get('password')
 
-        assert email and (email := email.strip()), 'Email is not set'
-        assert password and (password := password.strip()), 'Password is not set'
-        assert EMAIL_REGEX.match(email), 'Invalid email format'
+        if not email or not (email := email.strip()):
+            raise ValueError('Email is not set')
+
+        if not password or not (password := password.strip()):
+            raise ValueError('Password is not set')
+
+        if not EMAIL_REGEX.match(email):
+            raise ValueError('Invalid email format')
 
         hashed_password = HashAPI.hash_sha512(password)
 
         db = DataBase()
         db_session = db.create_session()
         user = db_session.query(db.User).filter_by(email=email).first()
-        assert user and hashed_password == user.password, 'Incorrect login or password'.format(email)
+
+        if not user or hashed_password != user.password:
+            raise PermissionError('Incorrect login or password')
 
         user_session = db_session.query(db.Session).filter_by(user_id=user.id).first()
 

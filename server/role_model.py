@@ -26,14 +26,14 @@ class RoleModel:
             """Wrap decorated method.
 
             Args:
-                *args (tuple): Tuple with nameless arguments,
+                *args (tuple): Tuple with nameless arguments;
                 **kwargs (dict): Dict with named arguments.
 
             Returns:
                 Result of called wrapped method.
 
             Raises:
-                HTTPUnauthorized: 401 HTTP error, if user session is expired or not found,
+                HTTPUnauthorized: 401 HTTP error, if user session is expired or not found;
                 HTTPForbidden: 403 HTTP error, if access denied.
 
             """
@@ -74,14 +74,17 @@ class RoleModel:
             method_name (str): Method name.
 
         Raises:
-            AssertionError: if method exists.
+            SystemError: if method exists.
 
         """
 
         db = DataBase()
         db_session = db.create_session()
         existing_method = db_session.query(db.Method).filter_by(name=method_name).first()
-        assert not existing_method, 'Method {} already exists'.format(method_name)
+
+        if existing_method:
+            raise SystemError(f'Method {method_name} already exists')
+
         db_session.add(db.Method(method_name))
         db_session.commit()
 
@@ -93,14 +96,17 @@ class RoleModel:
             method_name (str): Method name.
 
         Raises:
-            AssertionError: if method does not exist.
+            SystemError: if method does not exist.
 
         """
 
         db = DataBase()
         db_session = db.create_session()
         method = db_session.query(db.Method).filter_by(name=method_name).first()
-        assert method, 'Method {} is not found'.format(method_name)
+
+        if not method:
+            raise SystemError(f'Method {method_name} is not found')
+
         db_session.query(db.MethodRole).filter_by(method_id=method.id).delete()
         db_session.delete(method)
         db_session.commit()
@@ -113,14 +119,17 @@ class RoleModel:
             role_name (str): Role name.
 
         Raises:
-            AssertionError: if role exists.
+            SystemError: if role exists.
 
         """
 
         db = DataBase()
         db_session = db.create_session()
         existing_role = db_session.query(db.Role).filter_by(name=role_name).first()
-        assert not existing_role, 'Role {} already exists'.format(role_name)
+
+        if existing_role:
+            raise SystemError(f'Role {role_name} already exists')
+
         db_session.add(db.Role(role_name))
         db_session.commit()
 
@@ -132,15 +141,20 @@ class RoleModel:
             role_name (str): Role name.
 
         Raises:
-            AssertionError: if role does not exist.
+            SystemError: if role does not exist, if role has users.
 
         """
 
         db = DataBase()
         db_session = db.create_session()
         role = db_session.query(db.Role).filter_by(name=role_name).first()
-        assert role, 'Role {} is not found'.format(role_name)
-        assert not len(role.users), "You can't delete role with users"
+
+        if not role:
+            raise SystemError(f'Role {role_name} is not found')
+
+        if len(role.users):
+            raise SystemError("You can't delete role with users")
+
         db_session.query(db.MethodRole).filter_by(role_id=role.id).delete()
         db_session.delete(role)
         db_session.commit()
@@ -151,29 +165,39 @@ class RoleModel:
 
         Args:
             **kwargs (dict): Dict with named arguments. Keys:
-                method_name (str): Method name. Required.
+                method_name (str): Method name. Required;
                 role_name (str): Role name. Required.
 
         Raises:
-            AssertionError: if at least one required parameter in kwargs is not set, method is not found, role is not
-            found, method is already added to role.
+            ValueError: if at least one required parameter in kwargs is not set;
+            SystemError: method is not found, role is not found, method is already added to role.
 
         """
 
         method_name = kwargs.get('method')
         role_name = kwargs.get('role')
 
-        assert method_name and (method_name := method_name.strip()), 'Method name is not set'
-        assert role_name and (role_name := role_name.strip()), 'Role name is not set'
+        if not method_name or not (method_name := method_name.strip()):
+            raise ValueError('Method name is not set')
+
+        if not role_name or not (role_name := role_name.strip()):
+            raise ValueError('Role name is not set')
 
         db = DataBase()
         db_session = db.create_session()
         method = db_session.query(db.Method).filter_by(name=method_name).first()
         role = db_session.query(db.Role).filter_by(name=role_name).first()
-        assert method, 'Method {} is not found'.format(method_name)
-        assert role, 'Role {} is not found'.format(role_name)
+
+        if not method:
+            raise SystemError(f'Method {method_name} is not found')
+
+        if not role:
+            raise SystemError(f'Role {role_name} is not found')
+
         relations = set(filter(lambda rel: rel.role_id == role.id, method.roles))
-        assert not len(relations), 'Method {} already exists in role {}'.format(method_name, role_name)
+        if len(relations):
+            raise SystemError(f'Method {method_name} already exists in role {role_name}')
+
         role.methods.append(db.MethodRole(method=method))
         db_session.commit()
 
@@ -183,29 +207,39 @@ class RoleModel:
 
         Args:
             **kwargs (dict): Dict with named arguments. Keys:
-                method_name (str): Method name. Required.
+                method_name (str): Method name. Required;
                 role_name (str): Role name. Required.
 
         Raises:
-            AssertionError: if at least one required parameter in kwargs is not set, method is not found, role is not
-            found, method is not found in role.
+            ValueError: if at least one required parameter in kwargs is not set;
+            SystemError: method is not found, role is not found, method is not found in role.
 
         """
 
         method_name = kwargs.get('method')
         role_name = kwargs.get('role')
 
-        assert method_name and (method_name := method_name.strip()), 'Method name is not set'
-        assert role_name and (role_name := role_name.strip()), 'Role name is not set'
+        if not method_name or not (method_name := method_name.strip()):
+            raise ValueError('Method name is not set')
+
+        if not role_name or not (role_name := role_name.strip()):
+            raise ValueError('Role name is not set')
 
         db = DataBase()
         db_session = db.create_session()
         method = db_session.query(db.Method).filter_by(name=method_name).first()
         role = db_session.query(db.Role).filter_by(name=role_name).first()
-        assert method, 'Method {} is not found'.format(method_name)
-        assert role, 'Role {} is not found'.format(role_name)
+
+        if not method:
+            raise SystemError(f'Method {method_name} is not found')
+
+        if not role:
+            raise SystemError(f'Role {role_name} is not found')
+
         relations = set(filter(lambda rel: rel.role_id == role.id, method.roles))
-        assert len(relations), 'Method {} is not found in role {}'.format(method_name, role_name)
+        if not len(relations):
+            raise SystemError(f'Method {method_name} is not found in role {role_name}')
+
         db_session.delete(list(relations)[0])
         db_session.commit()
 
@@ -215,26 +249,34 @@ class RoleModel:
 
         Args:
             **kwargs (dict): Dict with named arguments. Keys:
-                method_name (str): Method name. Required.
+                method_name (str): Method name. Required;
                 value (bool): Value of shared property. Required.
 
         Raises:
-            AssertionError: if at least one required parameter in kwargs is not set, method is not found, value is not
-            boolean.
+            ValueError: if at least one required parameter in kwargs is not set, value is not boolean;
+            SystemError: method is not found.
 
         """
 
         method_name = kwargs.get('method')
         value = kwargs.get('value')
 
-        assert method_name and (method_name := method_name.strip()), 'Method name is not set'
-        assert value is not None, 'Value is not set'
-        assert isinstance(value, bool), 'Value should be boolean'
+        if not method_name or not (method_name := method_name.strip()):
+            raise ValueError('Method name is not set')
+
+        if not value:
+            raise ValueError('Value is not set')
+
+        if not isinstance(value, bool):
+            raise ValueError('Value should be boolean')
 
         db = DataBase()
         db_session = db.create_session()
         method = db_session.query(db.Method).filter_by(name=method_name).first()
-        assert method, 'Method {} is not found'.format(method_name)
+
+        if not method:
+            raise SystemError(f'Method {method_name} is not found')
+
         method.shared = value
         db_session.commit()
 
@@ -244,26 +286,34 @@ class RoleModel:
 
         Args:
             **kwargs (dict): Dict with named arguments. Keys:
-                email (str): User's email. Required.
+                email (str): User's email. Required;
                 role_name (str): Role name. Required.
 
         Raises:
-            AssertionError: if at least one required parameter in kwargs is not set, user is not found, role is not
-            found.
+            ValueError: if at least one required parameter in kwargs is not set;
+            SystemError: user is not found, role is not found.
 
         """
 
         email = kwargs.get('email')
         role_name = kwargs.get('role')
 
-        assert email and (email := email.strip()), 'Email is not set'
-        assert role_name and (role_name := role_name.strip()), 'Role name is not set'
+        if not email or not (email := email.strip()):
+            raise ValueError('Email is not set')
+
+        if not role_name or not (role_name := role_name.strip()):
+            raise ValueError('Role name is not set')
 
         db = DataBase()
         db_session = db.create_session()
         user = db_session.query(db.User).filter_by(email=email).first()
         role = db_session.query(db.Role).filter_by(name=role_name).first()
-        assert user, 'User with email {} is not found'.format(email)
-        assert role, 'Role {} is not found'.format(role_name)
+
+        if not user:
+            raise SystemError(f'User with email {email} is not found')
+
+        if not role:
+            raise SystemError(f'Role {role_name} is not found')
+
         user.role = role
         db_session.commit()
