@@ -2,7 +2,7 @@
 # All rights reserved.
 
 from aiohttp import web
-from server.database import DataBase
+from server.db.database import DataBase
 
 
 class RoleModel:

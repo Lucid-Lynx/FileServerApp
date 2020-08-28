@@ -1,6 +1,6 @@
 # Copyright 2019 by Kirill Kanin.
 # All rights reserved.
 
-from . import config
+from .utils import config
 
-__version__ = '1.14.0'
+__version__ = '1.15.0'

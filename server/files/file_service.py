@@ -3,9 +3,9 @@
 
 import os
 import typing
-import server.utils as utils
+import server.utils.utils as utils
 from collections import OrderedDict
-from server.crypto import BaseCipher, AESCipher, RSACipher, HashAPI
+from server.crypto.crypto import BaseCipher, AESCipher, RSACipher, HashAPI
 
 
 class FileService:

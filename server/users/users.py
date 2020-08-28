@@ -4,8 +4,8 @@
 import re
 from datetime import datetime
 from aiohttp import web
-from server.database import DataBase
-from server.crypto import HashAPI
+from server.db.database import DataBase
+from server.crypto.crypto import HashAPI
 
 
 EMAIL_REGEX = re.compile(r'[\w._%+-]+@[\w.-]+\.[A-Za-z]{2,}$')

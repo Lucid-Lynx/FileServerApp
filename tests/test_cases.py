@@ -5,12 +5,12 @@ import os
 import pytest
 import json
 import logging
-import server.utils as utils
+import server.utils.utils as utils
 from collections import OrderedDict
 from aiohttp import web
-from server.handler import Handler
-from server.database import DataBase
-from server.crypto import HashAPI, AESCipher, RSACipher
+from server.web.handler import Handler
+from server.db.database import DataBase
+from server.crypto.crypto import HashAPI, AESCipher, RSACipher
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

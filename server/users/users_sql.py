@@ -10,7 +10,7 @@ from contextlib import closing
 from datetime import datetime, timedelta
 from aiohttp import web
 from uuid import uuid4
-from server.crypto import HashAPI
+from server.crypto.crypto import HashAPI
 
 EMAIL_REGEX = re.compile(r'[\w._%+-]+@[\w.-]+\.[A-Za-z]{2,}$')
 PASSWORD_REGEX = re.compile(r'^\w{8,50}$')
