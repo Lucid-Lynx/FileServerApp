@@ -8,7 +8,7 @@ from uuid import uuid4
 from threading import Thread
 from queue import Queue
 from pathlib import Path
-from server.file_service import FileService, FileServiceSigned
+from server.files.file_service import FileService, FileServiceSigned
 
 logger = logging.getLogger(__name__)
 

@@ -8,8 +8,8 @@ import os
 import sys
 import logging
 from aiohttp import web
-from server.handler import Handler
-from server.database import DataBase
+from server.web.handler import Handler
+from server.db.database import DataBase
 
 
 def commandline_parser() -> argparse.ArgumentParser:

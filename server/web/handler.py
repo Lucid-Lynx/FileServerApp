@@ -5,12 +5,12 @@ import json
 from aiohttp import web
 from queue import Queue
 from distutils.util import strtobool
-from server.file_service import FileService, FileServiceSigned
-from server.file_loader import FileLoader, QueuedLoader
-from server.users import UsersAPI
-from server.role_model import RoleModel
-from server.users_sql import UsersSQLAPI
-from server.role_model_sql import RoleModelSQL
+from server.files.file_service import FileService, FileServiceSigned
+from server.files.file_loader import FileLoader, QueuedLoader
+from server.users.users import UsersAPI
+from server.role_model.role_model import RoleModel
+# from server.users.users_sql import UsersSQLAPI
+# from server.role_model.role_model_sql import RoleModelSQL
 
 
 class Handler:

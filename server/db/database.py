@@ -10,8 +10,8 @@ from sqlalchemy.orm.session import Session as DBSession
 from sqlalchemy.engine.base import Engine
 from datetime import datetime, timedelta
 from uuid import uuid4
-from server.crypto import HashAPI
-from server.utils import SingletonMeta
+from server.crypto.crypto import HashAPI
+from server.utils.utils import SingletonMeta
 
 
 class DataBase(metaclass=SingletonMeta):
