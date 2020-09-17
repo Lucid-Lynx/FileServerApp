@@ -6,7 +6,6 @@ import pytest
 import json
 import logging
 import server.utils.utils as utils
-from collections import OrderedDict
 from aiohttp import web
 from server.web.handler import Handler
 from server.db.database import DataBase
@@ -121,12 +120,13 @@ def prepare_data(request):
     user = db_session.query(db.User).filter_by(email='user2@test.su').first()
 
     full_test_file_4 = f'{test_folder}/{test_file_4}'
-    file_dict_4 = OrderedDict(
-        name=test_file_4,
-        create_date=utils.convert_date(os.path.getctime(full_test_file_4)),
-        size=os.path.getsize(full_test_file_4),
-        content=test_content,
-        user_id=user.id)
+    file_dict_4 = {
+        'name': test_file_4,
+        'create_date': utils.convert_date(os.path.getctime(full_test_file_4)),
+        'size': os.path.getsize(full_test_file_4),
+        'content': test_content,
+        'user_id': user.id,
+    }
     full_test_signature_file_4 = f'{test_folder}/{test_signature_file_4}'
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict_4.values()))))
     with open(full_test_signature_file_4, 'wb') as file_handler:
@@ -138,12 +138,13 @@ def prepare_data(request):
     with open(full_test_file_5, 'wb') as file_handler:
         data = bytes(test_content, 'utf-8')
         cipher.write_cipher_text(data, file_handler, test_file_5.split('.')[0])
-    file_dict = OrderedDict(
-        name=test_file_5,
-        create_date=utils.convert_date(os.path.getctime(full_test_file_5)),
-        size=os.path.getsize(full_test_file_5),
-        content=test_content,
-        user_id=user.id)
+    file_dict = {
+        'name': test_file_5,
+        'create_date': utils.convert_date(os.path.getctime(full_test_file_5)),
+        'size': os.path.getsize(full_test_file_5),
+        'content': test_content,
+        'user_id': user.id,
+    }
     full_test_signature_file_5 = f'{test_folder}/{test_signature_file_5}'
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict.values()))))
     with open(full_test_signature_file_5, 'wb') as file_handler:
@@ -155,12 +156,13 @@ def prepare_data(request):
     with open(full_test_file_6, 'wb') as file_handler:
         data = bytes(test_content, 'utf-8')
         cipher.write_cipher_text(data, file_handler, test_file_6.split('.')[0])
-    file_dict = OrderedDict(
-        name=test_file_6,
-        create_date=utils.convert_date(os.path.getctime(full_test_file_6)),
-        size=os.path.getsize(full_test_file_6),
-        content=test_content,
-        user_id=user.id)
+    file_dict = {
+        'name': test_file_6,
+        'create_date': utils.convert_date(os.path.getctime(full_test_file_6)),
+        'size': os.path.getsize(full_test_file_6),
+        'content': test_content,
+        'user_id': user.id,
+    }
     full_test_signature_file_6 = f'{test_folder}/{test_signature_file_6}'
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict.values()))))
     with open(full_test_signature_file_6, 'wb') as file_handler:
@@ -168,12 +170,13 @@ def prepare_data(request):
         file_handler.write(data)
 
     full_test_file_7 = f'{test_folder}/{test_file_7}'
-    file_dict_7 = OrderedDict(
-        name=test_file_7,
-        create_date=utils.convert_date(os.path.getctime(full_test_file_7)),
-        size=os.path.getsize(full_test_file_7),
-        content='Test',
-        user_id=user.id)
+    file_dict_7 = {
+        'name': test_file_7,
+        'create_date': utils.convert_date(os.path.getctime(full_test_file_7)),
+        'size': os.path.getsize(full_test_file_7),
+        'content': 'Test',
+        'user_id': user.id,
+    }
     full_test_signature_file_7 = f'{test_folder}/{test_signature_file_7}'
     signature = HashAPI.hash_md5('_'.join(list(str(x) for x in list(file_dict_7.values()))))
     with open(full_test_signature_file_7, 'wb') as file_handler:

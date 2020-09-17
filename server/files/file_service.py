@@ -4,7 +4,6 @@
 import os
 import typing
 import server.utils.utils as utils
-from collections import OrderedDict
 from server.crypto.crypto import BaseCipher, AESCipher, RSACipher, HashAPI
 
 
@@ -121,13 +120,14 @@ class FileService:
             raise PermissionError('Security level is invalid')
 
         with open(full_filename, 'rb') as file_handler:
-            return OrderedDict(
-                name=short_filename,
-                create_date=utils.convert_date(os.path.getctime(full_filename)),
-                edit_date=utils.convert_date(os.path.getmtime(full_filename)),
-                size=os.path.getsize(full_filename),
-                content=cipher.decrypt(file_handler, filename).decode('utf-8'),
-                user_id=user_id)
+            return {
+                'name': short_filename,
+                'create_date': utils.convert_date(os.path.getctime(full_filename)),
+                'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
+                'size': os.path.getsize(full_filename),
+                'content': cipher.decrypt(file_handler, filename).decode('utf-8'),
+                'user_id': user_id,
+            }
 
     async def get_file_data_async(self, filename: str, user_id: int = None) -> typing.Dict[str, str]:
         """Get full info about file. Asynchronous version.
@@ -176,13 +176,14 @@ class FileService:
             raise PermissionError('Security level is invalid')
 
         with open(full_filename, 'rb') as file_handler:
-            return OrderedDict(
-                name=short_filename,
-                create_date=utils.convert_date(os.path.getctime(full_filename)),
-                edit_date=utils.convert_date(os.path.getmtime(full_filename)),
-                size=os.path.getsize(full_filename),
-                content=cipher.decrypt(file_handler, filename).decode('utf-8'),
-                user_id=user_id)
+            return {
+                'name': short_filename,
+                'create_date': utils.convert_date(os.path.getctime(full_filename)),
+                'edit_date': utils.convert_date(os.path.getmtime(full_filename)),
+                'size': os.path.getsize(full_filename),
+                'content': cipher.decrypt(file_handler, filename).decode('utf-8'),
+                'user_id': user_id,
+            }
 
     def get_files(self) -> typing.List[typing.Dict[str, str]]:
         """Get info about all files in working directory.
@@ -260,12 +261,13 @@ class FileService:
                 data = bytes(content, 'utf-8')
                 cipher.write_cipher_text(data, file_handler, filename.split('.')[0])
 
-        return OrderedDict(
-            name=filename,
-            create_date=utils.convert_date(os.path.getctime(full_filename)),
-            size=os.path.getsize(full_filename),
-            content=content,
-            user_id=user_id)
+        return {
+            'name': filename,
+            'create_date': utils.convert_date(os.path.getctime(full_filename)),
+            'size': os.path.getsize(full_filename),
+            'content': content,
+            'user_id': user_id,
+        }
 
     def delete_file(self, filename: str):
         """Delete file.
